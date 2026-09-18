@@ -201,6 +201,8 @@ let renderLock=false;
 function renderAll(){
   if(renderLock) return;
   renderLock=true;
+  const area=$('#stageArea');
+  const keepT=area?area.scrollTop:0, keepL=area?area.scrollLeft:0;
   try{
     const n=buildDeck();
     S.flipIdx=clamp(S.flipIdx,0,Math.max(0,n-1));
@@ -208,6 +210,7 @@ function renderAll(){
     paintStageFoot(n);
     paintStageMeta(n);
     paintPagesSlider();
+    if(area){ area.scrollTop=keepT; area.scrollLeft=keepL; }
   }finally{ renderLock=false; }
   save();
 }
@@ -362,7 +365,15 @@ function paintMeSelect(){
   if(!ps.length){ const o=document.createElement('option'); o.textContent='—'; s.appendChild(o); }
 }
 function paintMemoSelInfo(){
-  const n=$('#memoSelInfo'); if(!n) return;
-  const c=S.memo.sel.length;
-  n.textContent = c? ('현재 '+c+'개 선택됨.') : '아직 선택된 메모가 없습니다.';
+  const n=$('#memoExportHint'); if(!n) return;
+  const c=S.memo.sel.length, w=S.memo.exportWhat;
+  const chosen = c ? ('<b>'+c+'개</b> 선택됨') : '<b>아직 선택 안 됨</b>';
+  if(w==='home'){
+    n.innerHTML='메모가 모여 있는 홈 화면만 내보냅니다.';
+  }else if(w==='detail'){
+    n.innerHTML='고른 메모의 <b>메모장 화면</b>만 내보냅니다 — 메모 1개당 1장. '+
+      '미리보기 위 <b>메모 고르기</b>를 켜고 카드를 눌러 고르세요. ('+chosen+')';
+  }else{
+    n.innerHTML='홈 화면 1장 + 고른 메모의 메모장 화면을 각각 1장씩 내보냅니다. ('+chosen+')';
+  }
 }

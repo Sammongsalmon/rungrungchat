@@ -142,7 +142,16 @@ function wire(){
   bindChoice('memoStyle',()=>S.memo.style,function(v){ S.memo.style=v; renderAll(); });
   bindChoice('memoGroup',()=>S.memo.group,function(v){ S.memo.group=v; renderAll(); });
   bindChoice('memoSort',()=>S.memo.sort,function(v){ S.memo.sort=v; S.memo.open=-1; paintEditList(); paintRangeUI(); renderAll(); });
-  bindChoice('memoExport',()=>S.memo.exportWhat,function(v){ S.memo.exportWhat=v; paintPagesSlider(); renderAll(); });
+  bindChoice('memoExport',()=>S.memo.exportWhat,function(v){
+    S.memo.exportWhat=v;
+    /* the detail screens come from cards picked on the home, so open picking for them */
+    if((v==='detail'||v==='both') && !S.memo.sel.length && !S.memo.pick){
+      S.memo.pick=true; S.memo.open=-1; paintStageTools();
+      toast('미리보기에서 내보낼 메모를 눌러 고르세요','info');
+    }
+    if(v==='home' && S.memo.pick){ S.memo.pick=false; paintStageTools(); }
+    paintMemoSelInfo(); paintPagesSlider(); renderAll();
+  });
   bindChoice('scale',()=>String(S.scale),function(v){ S.scale=+v; paintPagesSlider(); save(); });
 
   /* range */
@@ -247,7 +256,10 @@ function wire(){
     if(S.memo.pick){
       const i=S.memo.sel.indexOf(id);
       if(i>=0) S.memo.sel.splice(i,1); else S.memo.sel.push(id);
-      paintMemoSelInfo(); paintPagesSlider(); renderAll();
+      paintMemoSelInfo(); paintPagesSlider();
+      /* on the home-only view the pages don't change, so just repaint this card */
+      if(S.memo.exportWhat==='home'){ markMemoCard(card, i<0); save(); }
+      else renderAll();
     }else{
       const list=liveList();
       const k=list.findIndex(n=>n.id===id);

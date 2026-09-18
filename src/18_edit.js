@@ -42,8 +42,9 @@ function clampPages(){
 function paintPagesSlider(){
   const m=Math.max(1,liveList().length);
   const splitRooms = S.mode==='chat' && S.chat.roomMode==='split' && S.chat.rooms.length>1;
-  const lockMulti = splitRooms ||
-    (S.mode==='memo' && S.memo.open<0 && S.memo.exportWhat!=='home' && S.memo.sel.length>1);
+  const lockMulti = splitRooms || (S.mode==='memo' && S.memo.open<0 && (
+      S.memo.exportWhat==='both' ||
+      (S.memo.exportWhat==='detail' && S.memo.sel.length!==1)));
   const max = S.mode==='chat' ? chatMaxPages()
             : (S.memo.open>=0||S.memo.exportWhat!=='home' ? 40 : m);
   const v=clamp(S.pages[S.mode],1,max);
@@ -62,11 +63,13 @@ function paintPagesSlider(){
   $('#pagesSld').style.pointerEvents=lockMulti?'none':'';
   const h=$('#pagesHint');
   if(splitRooms) h.textContent='대화방 분리 모드에서는 방 개수만큼 자동으로 나뉩니다 — '+max+'장.';
-  else if(lockMulti) h.textContent='여러 메모를 선택하면 메모 1개당 1장으로 저장됩니다.';
+  else if(lockMulti) h.textContent = S.memo.exportWhat==='both'
+      ? '홈 1장 + 고른 메모 각 1장으로 자동 구성됩니다.'
+      : '고른 메모 1개당 1장으로 저장됩니다. 한 개만 고르면 그 메모를 여러 장으로 나눌 수 있어요.';
   else if(S.mode==='chat') h.textContent='보낸 사람 단위(말풍선 묶음)로 잘라 같은 높이의 이미지 '+v+'장을 만듭니다. 최대 '+max+'장.';
   else if(S.memo.open>=0) h.textContent='열어 본 메모의 본문을 '+v+'장으로 나눕니다.';
   else if(S.memo.exportWhat==='home') h.textContent='홈 화면을 메모 단위로 잘라 '+v+'장으로 나눕니다. 최대 '+max+'장.';
-  else h.textContent='선택한 메모 1개를 '+v+'장으로 나눕니다.';
+  else h.textContent='고른 메모 1개를 '+v+'장으로 나눕니다.';
   const sh=$('#sizeHint');
   if(sh) sh.textContent='가로 '+(PV_W*S.scale)+'px 기준으로 저장됩니다.';
 }

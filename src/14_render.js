@@ -84,15 +84,14 @@ function topBar(t,opt){
    Box geometry (13 x 18, left/right -9px, bottom 0):
      x = 9  -> the bubble's side wall     x = 13 -> 4px inside the bubble
      y = 18 -> the bubble's bottom line, shared exactly with the bubble
-   The outer edge peels off the side wall and runs into that same bottom line, so
-   the two fills read as one silhouette instead of a wedge parked next to one.
-   The caller flattens the bottom corner so the bubble's own fill reaches the line. */
+   NO stroke: a stroke is centred on the path, so any width at all pushes the
+   tail's underside below y=18 and leaves a visible step against the bubble.
+   The 4px overlap is what hides the seam instead. */
 function tailSvg(dir,col){
   const p = dir==='you'
-    ? 'M13 1.5 C13 9 10.7 14.4 5.9 17.3 C4.8 17.7 4.7 18 6 18 L13 18 Z'
-    : 'M0 1.5 C0 9 2.3 14.4 7.1 17.3 C8.2 17.7 8.3 18 7 18 L0 18 Z';
-  return svgTag(13,18,'cv-tail',
-    '<path d="'+p+'" fill="'+col+'" stroke="'+col+'" stroke-width="0.7" stroke-linejoin="round"/>');
+    ? 'M13 1.5 C13 9.4 10.2 15 4 17.5 C2.7 17.9 2.9 18 4.3 18 L13 18 Z'
+    : 'M0 1.5 C0 9.4 2.8 15 9 17.5 C10.3 17.9 10.1 18 8.7 18 L0 18 Z';
+  return svgTag(13,18,'cv-tail','<path d="'+p+'" fill="'+col+'"/>');
 }
 function avatarNode(name,t){
   const a=avatarFor(name);
@@ -265,6 +264,22 @@ function memoBodyNode(note,t,limit){
     const p=el('div','rt'); p.innerHTML=richHTML(b.c); wrap.appendChild(p);
   });
   return wrap;
+}
+
+/* toggle a card's picked state in place — rebuilding the deck for every tap
+   throws away scroll position and flashes the whole preview */
+function markMemoCard(card,picked){
+  const t=S.theme.memo;
+  card.classList.toggle('sel',picked);
+  const old=$('.mv-selmark',card);
+  if(old) old.remove();
+  if(picked){
+    const m=el('div','mv-selmark');
+    m.style.background=t.accent;
+    if(card.classList.contains('mv-row')){ m.style.position='static'; m.style.marginTop='7px'; }
+    m.appendChild(lineIco('check',11,readable(t.accent),3));
+    card.appendChild(m);
+  }
 }
 
 function renderMemoHome(notes,opt){
