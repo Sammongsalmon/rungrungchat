@@ -206,12 +206,36 @@ function colorRow(label,get,set,warnAgainst){
 /* ------------------------------------------------------------
    toast / modal / busy
    ------------------------------------------------------------ */
+/* Only ever one toast on screen. A second message replaces the first in place
+   (with a small bump so a repeat still registers) rather than stacking under it. */
+let toastEl=null, toastTimer=null;
 function toast(msg,kind){
   const w=$('#toasts'); if(!w) return;
-  const n=el('div','toast');
-  n.innerHTML=ico(kind==='warn'?'warn':kind==='info'?'info':'check',16)+'<span>'+esc(msg)+'</span>';
-  w.appendChild(n);
-  setTimeout(function(){ n.classList.add('out'); setTimeout(()=>n.remove(),300); }, kind==='warn'?3200:2100);
+  clearTimeout(toastTimer);
+  const html=ico(kind==='warn'?'warn':kind==='info'?'info':'check',16)+'<span>'+esc(msg)+'</span>';
+
+  if(toastEl && toastEl.parentNode){
+    toastEl.classList.remove('out');          /* cancels a dismissal already under way */
+    toastEl.innerHTML=html;
+    toastEl.classList.remove('bump');
+    void toastEl.offsetWidth;                 /* restart the animation */
+    toastEl.classList.add('bump');
+  }else{
+    w.innerHTML='';
+    toastEl=el('div','toast');
+    toastEl.innerHTML=html;
+    w.appendChild(toastEl);
+  }
+
+  const t=toastEl;
+  toastTimer=setTimeout(function(){
+    t.classList.add('out');
+    setTimeout(function(){
+      if(!t.classList.contains('out')) return; /* it got reused in the meantime */
+      if(t.parentNode) t.remove();
+      if(toastEl===t) toastEl=null;
+    },300);
+  }, kind==='warn'?3200:2100);
 }
 function confirmBox(title,body,okLabel,onOk,danger){
   const bg=$('#sheetBg'), sh=$('#sheet');
