@@ -69,7 +69,7 @@
   word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap;
   min-width:0;max-width:100%;
 }
-.cv-tail{position:absolute;bottom:0;width:13px;height:18px;overflow:visible}
+.cv-tail{position:absolute;bottom:-5px;width:13px;height:21px;overflow:visible}
 .cv-row.you .cv-tail{left:-9px}
 .cv-row.me .cv-tail{right:-9px}
 .cv-readlabel{align-self:flex-end;margin:0 3px 2px;font-weight:600;letter-spacing:-.01em}
