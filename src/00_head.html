@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="AI 채팅·메모 OOC 출력을 실제 휴대폰 화면처럼 시각화하는 도구">
+<title>룽룽씨 메이커</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" media="print" onload="this.media='all'">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2317181C'/%3E%3Cpath d='M8 12h16M8 17h11' stroke='%23fff' stroke-width='2.4' stroke-linecap='round'/%3E%3Cpath d='M20 22.5l3.6-2.4H24' stroke='%23FF6B57' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+/* ============================================================
+   0. RESET + TOKENS
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{-webkit-text-size-adjust:100%;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+button,input,textarea,select{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+h1,h2,h3,h4,p,figure{margin:0}
+ul,ol{margin:0;padding:0;list-style:none}
+img{display:block;max-width:100%}
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--scroll);border-radius:99px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--scroll-h);background-clip:content-box;border:3px solid transparent}
+::-webkit-scrollbar-track{background:transparent}
+
+:root{
+  /* app chrome: Pretendard when available */
+  --ui: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+        "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Segoe UI",
+        Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* phone preview: system stack only, so PNG export matches 1:1 */
+  --pv: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR",
+        "Malgun Gothic", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --bg:#F2F3F5;  --bg-grad:#EDEFF2;
+  --surface:#FFFFFF;
+  --surface-2:#F5F6F8;
+  --surface-3:#ECEEF1;
+  --line:#E3E6EA;
+  --line-soft:#EEF0F3;
+  --text:#15171B;
+  --text-2:#5A616B;
+  --text-3:#949BA5;
+  --text-4:#B6BCC5;
+  --ink:#17181C;
+  --ink-h:#2A2C33;
+  --accent:#3B5BFD;
+  --accent-soft:#EDF1FF;
+  --accent-line:#C9D5FF;
+  --danger:#E0453A;
+  --danger-soft:#FDEEEC;
+  --ok:#12996B;
+  --focus:#3B5BFD;
+  --scroll:#C9CED6;  --scroll-h:#AEB5BF;
+
+  --r-xs:6px; --r-sm:9px; --r-md:12px; --r-lg:16px; --r-xl:22px;
+  --sh-1:0 1px 2px rgba(16,20,28,.05);
+  --sh-2:0 2px 6px rgba(16,20,28,.07), 0 1px 2px rgba(16,20,28,.05);
+  --sh-3:0 12px 28px -8px rgba(16,20,28,.16), 0 3px 8px -2px rgba(16,20,28,.07);
+  --sh-stage:0 30px 70px -22px rgba(16,20,28,.30), 0 10px 26px -12px rgba(16,20,28,.16), 0 2px 6px rgba(16,20,28,.05);
+  --panel-w:428px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+html[data-ui="dark"]{
+  --bg:#101216; --bg-grad:#0B0D10;
+  --surface:#181B21;
+  --surface-2:#1F232A;
+  --surface-3:#272C34;
+  --line:#2C313A;
+  --line-soft:#232830;
+  --text:#EDEFF2;
+  --text-2:#A2AAB6;
+  --text-3:#767E8A;
+  --text-4:#5B626D;
+  --ink:#EDEFF2;
+  --ink-h:#FFFFFF;
+  --accent:#7B93FF;
+  --accent-soft:#1D2440;
+  --accent-line:#2E3C6B;
+  --danger:#FF6A5E;
+  --danger-soft:#33201E;
+  --ok:#31C48D;
+  --focus:#7B93FF;
+  --scroll:#3A404A; --scroll-h:#4C535F;
+  --sh-1:0 1px 2px rgba(0,0,0,.4);
+  --sh-2:0 2px 6px rgba(0,0,0,.4);
+  --sh-3:0 12px 28px -8px rgba(0,0,0,.6), 0 3px 8px -2px rgba(0,0,0,.4);
+  --sh-stage:0 30px 70px -22px rgba(0,0,0,.75), 0 10px 26px -12px rgba(0,0,0,.5);
+}
+html[data-ui="dark"] .ink-btn{color:#15171B}
+
+body{
+  font-family:var(--ui);
+  font-size:15px;
+  line-height:1.5;
+  color:var(--text);
+  background:var(--bg);
+  overscroll-behavior:none;
+}

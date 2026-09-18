@@ -1,0 +1,168 @@
+
+/* ============================================================
+   9. PHONE PREVIEW  —  NO pseudo-elements anywhere below this line
+      (everything here must survive DOM->SVG cloning for PNG export)
+   ============================================================ */
+.pv{
+  position:relative;display:flex;flex-direction:column;overflow:hidden;
+  font-family:var(--pv);
+  -webkit-font-smoothing:antialiased;
+  color:#111;
+}
+.pv-bg{position:absolute;inset:0;z-index:0}
+.pv-bg-img{position:absolute;inset:0;background-size:cover;background-position:center;z-index:0}
+.pv-bg-dim{position:absolute;inset:0;z-index:0}
+.pv-layer{position:relative;z-index:1;display:flex;flex-direction:column;flex:1 1 auto;min-height:0}
+
+/* status bar ------------------------------------------------------- */
+.pv-status{
+  flex:0 0 auto;height:44px;display:flex;align-items:center;
+  padding:0 22px 0 30px;font-size:14.5px;font-weight:650;letter-spacing:.01em;
+}
+.pv-status .st-l{font-variant-numeric:tabular-nums}
+.pv-status .st-r{margin-left:auto;display:flex;align-items:center;gap:5px}
+.pv-status svg{display:block}
+
+/* top bar ---------------------------------------------------------- */
+.pv-top{
+  flex:0 0 auto;display:flex;align-items:center;gap:10px;
+  padding:9px 14px;min-height:50px;
+}
+.pv-top .tb-back{flex:0 0 auto;display:flex;align-items:center}
+.pv-top .tb-mid{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:7px}
+.pv-top .tb-title{
+  font-size:16.5px;font-weight:700;letter-spacing:-.022em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.pv-top .tb-n{font-size:14px;font-weight:600;opacity:.45;font-variant-numeric:tabular-nums}
+.pv-top .tb-r{flex:0 0 auto;display:flex;align-items:center;gap:14px}
+.pv-top.center .tb-mid{justify-content:center}
+.pv-top-line{flex:0 0 auto;height:1px;width:100%}
+
+/* scroll body ------------------------------------------------------ */
+.pv-body{flex:1 1 auto;min-height:0;padding:10px 0 18px}
+
+/* ---------------- CHAT -------------------------------------------- */
+.cv-date{display:flex;justify-content:center;margin:10px 0 14px}
+.cv-date span{
+  padding:4px 11px;border-radius:999px;font-size:11.5px;font-weight:650;letter-spacing:-.01em;
+}
+.cv-row{display:flex;gap:8px;padding:0 12px;margin-bottom:9px;align-items:flex-start}
+.cv-row.me{flex-direction:row-reverse}
+.cv-row.tight{margin-top:-6px}
+.cv-av{
+  flex:0 0 auto;width:38px;height:38px;border-radius:14px;overflow:hidden;
+  display:grid;place-items:center;font-size:15px;font-weight:700;color:#fff;
+  background-size:cover;background-position:center;
+}
+.cv-av.sp{background:none!important;color:transparent}
+.cv-col{display:flex;flex-direction:column;min-width:0;max-width:74%}
+.cv-row.me .cv-col{align-items:flex-end}
+.cv-name{
+  font-size:12.5px;font-weight:600;letter-spacing:-.012em;margin:1px 0 5px;padding:0 2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;
+}
+.cv-line{display:flex;align-items:flex-end;gap:5px;margin-bottom:3px;max-width:100%}
+.cv-row.me .cv-line{flex-direction:row-reverse}
+.cv-bub{
+  position:relative;padding:8px 12px;font-size:15px;line-height:1.47;letter-spacing:-.015em;
+  word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap;
+  min-width:0;max-width:100%;
+}
+.cv-tail{position:absolute;top:0;width:9px;height:14px;overflow:visible}
+.cv-row.you .cv-tail{left:-7px}
+.cv-row.me .cv-tail{right:-7px}
+.cv-meta{
+  flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;
+  font-size:10.5px;line-height:1.3;font-weight:500;letter-spacing:-.01em;
+  padding-bottom:2px;font-variant-numeric:tabular-nums;
+}
+.cv-row.me .cv-meta{align-items:flex-start}
+.cv-read{font-size:10.5px;font-weight:650}
+.cv-mis{
+  display:inline-flex;align-items:center;gap:3px;margin:0 0 4px;padding:2px 7px;
+  border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:-.01em;
+}
+.cv-sys{display:flex;justify-content:center;margin:6px 0 12px;padding:0 24px}
+.cv-sys span{
+  padding:6px 12px;border-radius:12px;font-size:11.5px;line-height:1.5;text-align:center;
+  font-weight:550;
+}
+.cv-input{
+  flex:0 0 auto;display:flex;align-items:center;gap:9px;padding:9px 13px 11px;
+}
+.cv-input .ci-plus{flex:0 0 auto}
+.cv-input .ci-box{
+  flex:1 1 auto;min-width:0;padding:8px 12px;border-radius:999px;font-size:14px;
+}
+.cv-input .ci-send{flex:0 0 auto;width:30px;height:30px;border-radius:999px;display:grid;place-items:center}
+.cv-home{flex:0 0 auto;display:flex;justify-content:center;padding:6px 0 8px}
+.cv-home i{display:block;width:128px;height:5px;border-radius:99px}
+
+/* ---------------- MEMO -------------------------------------------- */
+.mv-big{padding:4px 18px 8px}
+.mv-big h2{font-size:31px;font-weight:800;letter-spacing:-.033em;line-height:1.2}
+.mv-search{margin:4px 16px 14px;padding:8px 12px;border-radius:11px;display:flex;align-items:center;gap:7px;
+  font-size:14px;letter-spacing:-.01em}
+.mv-grp{padding:14px 18px 7px;font-size:13.5px;font-weight:700;letter-spacing:-.018em}
+.mv-grp.first{padding-top:4px}
+
+/* list style (iOS) */
+.mv-list{padding:0 12px}
+.mv-row{padding:11px 14px;border-radius:12px;margin-bottom:3px}
+.mv-row .mr-t{font-size:15.5px;font-weight:650;letter-spacing:-.02em;line-height:1.35;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mv-row .mr-m{display:flex;gap:6px;align-items:baseline;margin-top:2px;font-size:12.5px;letter-spacing:-.01em}
+.mv-row .mr-d{flex:0 0 auto;font-weight:550;font-variant-numeric:tabular-nums}
+.mv-row .mr-s{flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mv-row .mr-line{height:1px;margin:11px -14px -11px 0;width:100%}
+.mv-row.sel{box-shadow:inset 0 0 0 2px currentColor}
+
+/* card style (Galaxy) */
+.mv-cards{padding:0 14px;display:flex;flex-direction:column;gap:11px}
+.mv-cards.g2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.mv-card{padding:13px 14px 14px;border-radius:16px;overflow:hidden;position:relative}
+.mv-card .mc-t{font-size:11.5px;font-weight:550;margin-bottom:5px;font-variant-numeric:tabular-nums}
+.mv-card .mc-title{font-size:15px;font-weight:700;letter-spacing:-.02em;line-height:1.35;margin-bottom:3px;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mv-card .mc-sub{font-size:13px;line-height:1.5;letter-spacing:-.012em;margin-bottom:5px;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mv-card .mc-body{font-size:12.5px;line-height:1.55;letter-spacing:-.01em;overflow:hidden}
+.mv-card .mc-tag{
+  display:inline-block;margin-bottom:6px;padding:2px 7px;border-radius:6px;
+  font-size:10.5px;font-weight:700;letter-spacing:-.005em;
+}
+.mv-card .mc-pin{position:absolute;right:11px;top:11px}
+.mv-card.sel{box-shadow:inset 0 0 0 2.5px currentColor}
+.mv-selmark{
+  position:absolute;right:9px;bottom:9px;width:20px;height:20px;border-radius:99px;
+  display:grid;place-items:center;
+}
+
+/* detail */
+.mv-d{padding:6px 20px 24px}
+.mv-d .md-date{font-size:11.5px;font-weight:550;text-align:center;margin-bottom:16px;letter-spacing:.005em}
+.mv-d .md-tag{display:inline-block;margin-bottom:9px;padding:3px 9px;border-radius:7px;
+  font-size:11.5px;font-weight:700;letter-spacing:-.008em}
+.mv-d .md-title{font-size:22px;font-weight:800;letter-spacing:-.03em;line-height:1.3;margin-bottom:10px}
+.mv-d .md-body{font-size:15px;line-height:1.66;letter-spacing:-.014em;white-space:pre-wrap;word-break:break-word}
+.mv-d .md-li{display:flex;gap:8px;margin:2px 0}
+.mv-d .md-li .li-b{flex:0 0 auto;font-weight:700;opacity:.55}
+.mv-d .md-li .li-c{flex:1 1 auto;min-width:0}
+.mv-d .md-cb{flex:0 0 auto;width:17px;height:17px;border-radius:99px;margin-top:3px;
+  display:grid;place-items:center}
+.mv-paper{position:absolute;inset:0;z-index:0;pointer-events:none}
+
+/* rich text -------------------------------------------------------- */
+.rt b,.rt strong,.rt .fw-b{font-weight:800}
+.rt i,.rt em{font-style:italic}
+.rt s,.rt del,.rt strike{text-decoration:line-through;opacity:.72}
+.rt u{text-decoration:underline;text-underline-offset:2px}
+.rt small{font-size:.82em;opacity:.85}
+.rt big{font-size:1.2em}
+.rt .fs-xxs{font-size:.7em}
+.rt .fs-xs{font-size:.82em}
+.rt .fs-sm{font-size:.91em}
+.rt .fs-lg{font-size:1.14em}
+.rt .fs-xl{font-size:1.32em}
+.rt .fs-xxl{font-size:1.55em}

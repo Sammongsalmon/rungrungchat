@@ -1,0 +1,160 @@
+
+/* ============================================================
+   1. APP SHELL / LAYOUT
+   ============================================================ */
+.app{height:100vh;height:100dvh;display:flex;flex-direction:column;background:
+  radial-gradient(1200px 600px at 70% -10%, var(--bg) 0%, var(--bg-grad) 100%)}
+
+.appbar{
+  flex:0 0 auto;display:flex;align-items:center;gap:14px;
+  height:58px;padding:0 16px;
+  background:var(--surface);border-bottom:1px solid var(--line);
+  position:relative;z-index:40;
+}
+.brand{display:flex;align-items:center;gap:9px;min-width:0}
+.brand svg{flex:0 0 auto}
+.brand h1{
+  font-size:16px;font-weight:700;letter-spacing:-.017em;white-space:nowrap;
+}
+.brand .brand-sub{
+  font-size:11px;font-weight:600;color:var(--text-3);letter-spacing:.02em;
+  padding:2px 6px;border:1px solid var(--line);border-radius:999px;
+}
+.appbar-spacer{flex:1 1 auto}
+.appbar-actions{display:flex;align-items:center;gap:4px}
+
+/* segmented control ------------------------------------------------ */
+.seg{
+  position:relative;display:inline-flex;padding:3px;gap:2px;
+  background:var(--surface-2);border-radius:11px;
+}
+.seg-ind{
+  position:absolute;top:3px;left:3px;height:calc(100% - 6px);
+  background:var(--surface);border-radius:8px;box-shadow:var(--sh-2);
+  transition:transform .28s cubic-bezier(.22,1,.36,1), width .28s cubic-bezier(.22,1,.36,1);
+  pointer-events:none;
+}
+html[data-ui="dark"] .seg-ind{background:var(--surface-3)}
+.seg-btn{
+  position:relative;z-index:1;padding:7px 18px;border-radius:8px;
+  font-size:13.5px;font-weight:600;letter-spacing:-.01em;color:var(--text-3);
+  transition:color .2s;white-space:nowrap;
+}
+.seg-btn.is-on{color:var(--text)}
+.seg-btn:hover{color:var(--text-2)}
+.seg-btn.is-on:hover{color:var(--text)}
+
+/* icon button ------------------------------------------------------ */
+.icon-btn{
+  width:38px;height:38px;display:grid;place-items:center;border-radius:10px;
+  color:var(--text-2);transition:background .16s,color .16s;
+}
+.icon-btn:hover{background:var(--surface-2);color:var(--text)}
+.icon-btn:active{background:var(--surface-3)}
+.icon-btn.is-on{background:var(--accent-soft);color:var(--accent)}
+.icon-btn svg{width:19px;height:19px}
+
+/* workspace -------------------------------------------------------- */
+.workspace{
+  flex:1 1 auto;min-height:0;display:grid;
+  grid-template-columns:var(--panel-w) minmax(0,1fr);
+}
+.panel{
+  grid-column:1;grid-row:1;min-height:0;min-width:0;display:flex;flex-direction:column;
+  background:var(--surface);border-right:1px solid var(--line);z-index:20;
+}
+.stage{
+  /* min-width:0 — without it a wide preview stretches the grid track past the viewport */
+  grid-column:2;grid-row:1;min-height:0;min-width:0;display:flex;flex-direction:column;
+  position:relative;
+}
+
+/* ============================================================
+   2. STAGE (preview)
+   ============================================================ */
+.stage-bar{
+  flex:0 0 auto;display:flex;align-items:center;gap:8px;
+  padding:12px 18px;min-height:56px;
+}
+.stage-label{
+  font-size:11.5px;font-weight:700;letter-spacing:.055em;text-transform:uppercase;
+  color:var(--text-3);
+}
+.stage-meta{
+  font-size:12.5px;color:var(--text-3);font-variant-numeric:tabular-nums;
+  padding-left:10px;margin-left:2px;border-left:1px solid var(--line);
+}
+.stage-tools{margin-left:auto;display:flex;align-items:center;gap:6px}
+
+.stage-area{
+  flex:1 1 auto;min-height:0;overflow:auto;
+  padding:4px 28px 34px;
+  display:flex;align-items:flex-start;justify-content:center;
+  scrollbar-gutter:stable;
+  overscroll-behavior-x:contain;
+}
+.stage-area.is-flip{align-items:center;overflow:hidden;padding:0 28px 34px}
+
+.deck{
+  position:relative;display:flex;gap:26px;align-items:flex-start;
+  justify-content:center;flex-wrap:wrap;
+  transition:opacity .2s;
+}
+.deck.is-flip{
+  display:block;width:100%;height:100%;
+  perspective:1700px;perspective-origin:50% 45%;
+}
+
+/* a single exported page ------------------------------------------- */
+.page{
+  position:relative;flex:0 0 auto;
+  border-radius:26px;overflow:hidden;
+  background:#fff;
+  box-shadow:var(--sh-stage);
+  transform-origin:50% 0;
+}
+.page-tag{
+  position:absolute;top:10px;left:50%;transform:translateX(-50%);
+  z-index:9;font-size:11px;font-weight:700;letter-spacing:.04em;
+  padding:3px 9px;border-radius:999px;pointer-events:none;
+  background:rgba(23,24,28,.62);color:#fff;
+  opacity:0;transition:opacity .2s;
+}
+.deck:not(.is-flip):hover .page-tag{opacity:1}
+
+.deck.is-flip .page{
+  position:absolute;top:50%;left:50%;margin:0;
+  transform-origin:50% 50%;
+  transition:transform .42s cubic-bezier(.24,.9,.28,1), opacity .42s cubic-bezier(.24,.9,.28,1), filter .42s;
+  will-change:transform,opacity;
+}
+.deck.is-flip .page[data-rel="0"]{z-index:5;opacity:1;filter:none}
+.deck.is-flip .page[data-rel="-1"],
+.deck.is-flip .page[data-rel="1"]{z-index:3;opacity:.34;filter:saturate(.75)}
+.deck.is-flip .page[data-rel="-2"],
+.deck.is-flip .page[data-rel="2"]{z-index:2;opacity:.14;filter:saturate(.5)}
+.deck.is-flip .page[data-far="1"]{opacity:0;z-index:1;pointer-events:none}
+
+.stage-foot{
+  flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:14px;
+  padding:0 18px 14px;min-height:30px;
+}
+.dots{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:60%}
+.dot{
+  width:7px;height:7px;border-radius:99px;background:var(--text-4);
+  transition:all .25s cubic-bezier(.22,1,.36,1);
+}
+.dot.is-on{width:20px;background:var(--accent)}
+.flip-nav{display:flex;align-items:center;gap:2px}
+.flip-count{
+  font-size:12.5px;font-weight:650;color:var(--text-2);
+  font-variant-numeric:tabular-nums;min-width:52px;text-align:center;
+}
+
+.stage-empty{
+  align-self:center;margin:auto;text-align:center;max-width:330px;
+  padding:40px 20px;color:var(--text-3);
+}
+.stage-empty svg{margin:0 auto 16px;opacity:.5}
+.stage-empty h3{font-size:15px;font-weight:650;color:var(--text-2);margin-bottom:6px}
+.stage-empty p{font-size:13.5px;line-height:1.65}
