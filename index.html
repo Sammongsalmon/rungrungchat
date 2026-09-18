@@ -1406,6 +1406,7 @@ const ICO={
  warn:'<path d="M12 4.5 2.8 20h18.4L12 4.5Z"/><path d="M12 10v4.2"/><circle cx="12" cy="17.2" r=".9" fill="currentColor" stroke="none"/>',
  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".9" fill="currentColor" stroke="none"/>',
  pin:'<path d="M9 4h6l-.8 5.2 3 2.6V14H6.8v-2.2l3-2.6L9 4ZM12 14v6"/>',
+ undo:'<path d="M4.5 9.5h9a5.5 5.5 0 1 1 0 11H8.5"/><path d="m8.5 5.5-4 4 4 4"/>',
  dice:'<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.6" cy="8.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.4" cy="15.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.4" cy="8.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="8.6" cy="15.4" r="1.35" fill="currentColor" stroke="none"/>',
  drop:'<path d="M12 3.2s6 6.6 6 10.4a6 6 0 0 1-12 0C6 9.8 12 3.2 12 3.2Z"/>'
 };
@@ -1864,6 +1865,24 @@ function vivid(c,dark){
                : clamp(Math.min(Math.max(H[2],0.45),0.62),0,1);
   return fromHsl(H[0],s,l);
 }
+/* A memo page should read as paper with the theme breathed into it: high lightness,
+   low chroma. A bright but saturated tint reads as a highlighter, not paper — so take
+   the lightness up first, then wash the colour out until only a calm hint is left. */
+function paperTint(c,maxChroma,minLit){
+  const H=hsl(hx(c)||'#FFFFFF');
+  let out=fromHsl(H[0],H[1],Math.max(H[2],minLit));
+  let i=0;
+  while(chroma(out)>maxChroma && i++<40) out=mix(out,'#FFFFFF',0.08);
+  return out;
+}
+/* The card has to stay the lightest thing on screen. A page washed brighter than this
+   leaves a white card nowhere left to go, so walk the page's lightness back down —
+   hue and saturation untouched, only the tone moves. */
+function capLum(c,maxLum){
+  let H=hsl(hx(c)||'#FFFFFF'), out=hx(c)||'#FFFFFF', i=0;
+  while(lum(out)>maxLum && i++<70){ H=[H[0],H[1],H[2]-0.008]; out=fromHsl(H[0],H[1],H[2]); }
+  return out;
+}
 function vividOn(c,bg,min,dark){
   const v=vivid(c,dark);
   if(contrast(v,bg)>=min) return v;
@@ -1893,14 +1912,17 @@ function themeFromPalette(id,name,pal,opt){
   opt=opt||{};
   const s=pal.slice().sort((a,b)=>lum(a)-lum(b));
   const acc=hx(opt.accent)||accentOf(pal);
-  const dark = opt.dark!=null ? opt.dark : (lum(s[3])<0.46);
+  /* a palette may pin its wallpaper instead of taking the palest swatch — the only
+     way to keep a bright point colour ON the wallpaper rather than under it */
+  const pin  = hx(opt.bg);
+  const dark = opt.dark!=null ? opt.dark : (lum(pin||s[3])<0.46);
 
   /* ---------- chat ---------- */
-  const bg   = dark ? s[0] : s[3];
+  const bg   = pin || (dark ? s[0] : s[3]);
   /* fitFill can drag a bubble back toward the wallpaper — separate again afterwards */
-  const you  = separate(fitFill(dark ? mix(s[1],'#FFFFFF',0.06) : mix(s[3],'#FFFFFF',0.82), 7.2), bg, 1.16);
+  const you  = separate(fitFill(dark ? mix(s[1],'#FFFFFF',0.06) : mix(bg,'#FFFFFF',0.82), 7.2), bg, 1.16);
   const me   = separate(fitFill(acc===bg?mix(acc,dark?'#FFFFFF':'#000000',0.18):acc, 4.85), bg, 1.22);
-  const bar  = dark ? mix(s[0],s[1],0.62) : mix(s[3],'#FFFFFF',0.52);
+  const bar  = dark ? mix(s[0],s[1],0.62) : mix(bg,'#FFFFFF',0.52);
   const ink  = dark ? '#F2F4F7' : '#16181C';
   const chat={
     bgType:'solid', bg1:bg, bg2:autoGrad(bg,me,dark), bg2auto:true, bgAngle:160, bgImg:'', bgDim:0,
@@ -1928,13 +1950,18 @@ function themeFromPalette(id,name,pal,opt){
     mbg  = mix(s[0],'#000000',0.25);
     card = fitFill(mix(s[0],'#FFFFFF',0.075), 9);
   }else{
-    /* tint from the most colourful mid-tone, not just the palest swatch */
-    let tint=s[2];
-    if(chroma(s[1])>chroma(tint)*1.2) tint=s[1];
-    if(chroma(s[3])>chroma(tint)*1.2) tint=s[3];
-    mbg = mix(tint,'#FFFFFF',0.52);
-    let g=0; while(lum(mbg)<0.80 && g++<24) mbg=mix(mbg,'#FFFFFF',0.11);
-    card = mix(s[3],'#FFFFFF',0.84);
+    /* tint from the most colourful mid-tone, not just the palest swatch — unless the
+       palette pins one, which is how a theme keeps its main hue on the memo page while
+       a punchier colour stays the accent */
+    let tint=hx(opt.memoTint)||s[2];
+    if(!opt.memoTint){
+      if(chroma(s[1])>chroma(tint)*1.2) tint=s[1];
+      if(chroma(s[3])>chroma(tint)*1.2) tint=s[3];
+    }
+    mbg = capLum(paperTint(tint,0.105,0.90),0.90);
+    /* a pinned tint carries the card too, so the page and the note read as one
+       material and the punchy colour stays reserved for the accent */
+    card = mix(opt.memoTint?tint:s[3],'#FFFFFF',0.84);
     let guard=0;
     while(lum(card)-lum(mbg)<0.09 && guard++<20) card=mix(card,'#FFFFFF',0.2);
     card = fitFill(card, 9);
@@ -1968,56 +1995,61 @@ function monoTheme(id,name,h,sat,lit){
    goes through ensure()/fitFill()/separate(), so no shuffle can land on a
    combination you cannot read.
    ============================================================ */
-const MIX_DEF={ c1:'#FFD400', c2:'#2B2B2B', c3:'#E62D20',
-  on2:true, on3:true, white:true, black:true, tint:true, paperMix:78, order:null };
+/* ============================================================
+   COLOUR MIXER
+   The mixer no longer invents a theme out of thin air. It takes the theme that is
+   already on screen, reads the three colours that give it its identity (bubble ·
+   wallpaper · accent) and swaps the chosen colours in for them.
 
-function mixRoleKeys(m){
-  const k=['c1'];
-  if(m.on2!==false && m.c2) k.push('c2');
-  if(m.on3!==false && m.c3) k.push('c3');
-  if(m.white!==false) k.push('white');
-  if(m.black!==false) k.push('black');
-  return k;
+   Every surface keeps its own LIGHTNESS through the swap. That is what preserves the
+   arrangement: what was light stays light, what was dark stays dark, so the layering
+   and every contrast relationship survive and only the hue changes.
+   ============================================================ */
+const MIX_DEF={ c1:'', c2:'', c3:'', on2:true, on3:true,
+                paper:0, order:[0,1,2], seed:null, base:null, baseId:'' };
+
+/* the three colours the role strip names, pulled out of any theme */
+function themeSeed(th){
+  const c=(th&&th.chat)||{}, m=(th&&th.memo)||{};
+  return [ hx(c.meBg)||'#8A8A8E', hx(c.bg1)||'#FFFFFF',
+           hx(m.accent)||hx(c.misBg)||hx(c.youBg)||'#8A8A8E' ];
 }
-function mixRoleColor(k,m){
-  if(k==='c1') return hx(m.c1)||'#FFD400';
-  if(k==='c2') return hx(m.c2)||hx(m.c1)||'#2B2B2B';
-  if(k==='c3') return hx(m.c3)||hx(m.c2)||hx(m.c1)||'#E62D20';
-  if(k==='white') return '#FFFFFF';
-  if(k==='black') return '#111111';
-  return null;
+function seedMixer(th,id){
+  const seed=themeSeed(th);
+  return { c1:seed[0], c2:seed[1], c3:seed[2], on2:true, on3:true,
+           paper:0, order:[0,1,2], seed:seed, baseId:id||'',
+           base:{ chat:deep(th.chat||{}), memo:deep(th.memo||{}) } };
 }
-/* drop roles that got switched off, append ones that got switched on, kill dupes */
-function mixOrder(m){
-  const en=mixRoleKeys(m);
-  const saved=Array.isArray(m.order)?m.order:[];
-  const out=saved.filter(function(r,i){ return en.indexOf(r)>=0 && saved.indexOf(r)===i; });
-  en.forEach(function(r){ if(out.indexOf(r)<0) out.push(r); });
-  return out;
+function mixUsable(m){
+  return !!(m && m.base && m.base.chat && Array.isArray(m.seed) && m.seed.length===3);
 }
-function mixColors(m){
-  const out=[];
-  mixOrder(m).forEach(function(k){
-    const c=mixRoleColor(k,m);
-    if(c && !out.some(function(x){return x.toUpperCase()===c.toUpperCase();})) out.push(c);
+/* order[slot] = which chosen colour lands on that slot; a colour switched off leaves
+   the slot on the theme's own colour */
+function mixTargets(m){
+  const seed=(m.seed&&m.seed.length===3)?m.seed:['#8A8A8E','#FFFFFF','#8A8A8E'];
+  const ord=(Array.isArray(m.order)&&m.order.length===3)?m.order:[0,1,2];
+  const on=[true, m.on2!==false, m.on3!==false];
+  const pick=[m.c1,m.c2,m.c3];
+  return [0,1,2].map(function(slot){
+    const i=ord[slot];
+    if(i==null || !on[i]) return seed[slot];
+    return hx(pick[i]) || seed[slot];
   });
-  if(!out.length) out.push(hx(m.c1)||'#FFD400');
-  return out;
 }
+function mixColors(m){ return mixTargets(m); }
 /* Fisher–Yates, retried until the order actually changes — a shuffle button that
    sometimes does nothing reads as broken */
 function shuffleMix(m,rnd){
   rnd=rnd||Math.random;
-  const keys=mixRoleKeys(m);
-  if(keys.length<2) return null;
-  const prev=mixOrder(m).join('|');
-  const sh=keys.slice();
+  const prev=((Array.isArray(m.order)&&m.order.length===3)?m.order:[0,1,2]).join('|');
+  const sh=[0,1,2];
   for(let a=0;a<12;a++){
     for(let i=sh.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); const t=sh[i]; sh[i]=sh[j]; sh[j]=t; }
     if(sh.join('|')!==prev) break;
   }
-  return sh;
+  return sh.join('|')===prev ? null : sh;
 }
+
 /* the most legible highlight on this background; give up rather than ship a faint one */
 function bestAccent(bg,base,cands){
   let best=null,bs=-1;
@@ -2030,8 +2062,7 @@ function bestAccent(bg,base,cands){
   return best||cands[0]||'#111111';
 }
 /* A fill has two jobs at once: stand apart from what is behind it, AND be extreme
-   enough that black or white text sits on it legibly. Nudging for one can undo the
-   other, so settle both together and take whichever direction gets there first. */
+   enough that black or white text sits on it legibly. */
 function settleFill(c,bg,minSep,minTxt,prefer){
   const ok=function(x){
     return contrast(x,bg)>=minSep &&
@@ -2050,76 +2081,168 @@ function settleFill(c,bg,minSep,minTxt,prefer){
   });
   return best || (lum(bg)>0.5 ? '#0A0B0D' : '#FFFFFF');
 }
-function byLum(a,dir){ return a.slice().sort(function(x,y){ return dir*(lum(x)-lum(y)); })[0]; }
+
+/* Separate a fill from its background by walking its LIGHTNESS only, so hue and
+   saturation come through untouched and the colour never drifts. It keeps the side
+   of the background it already sits on; when that side runs out of room — a nearly
+   white wallpaper has nothing lighter left — it flips to the other side instead of
+   snapping to black. */
+function holdApart(fill,bg,minSep,minTxt){
+  const c=hx(fill)||'#888888', H=hsl(c);
+  const ok=function(x){
+    return contrast(x,bg)>=minSep &&
+           (!minTxt || Math.max(contrast(x,'#FFFFFF'),contrast(x,'#0A0B0D'))>=minTxt);
+  };
+  if(ok(c)) return c;
+  let side = hsl(bg)[2] <= H[2] ? 1 : -1;
+  for(let pass=0;pass<2;pass++){
+    for(let i=1;i<=70;i++){
+      const x=fromHsl(H[0],H[1],clamp(H[2]+side*i*0.012,0,1));
+      if(ok(x)) return x;
+    }
+    side=-side;
+  }
+  return settleFill(c,bg,minSep,minTxt,null);
+}
+
+/* Drive a colour to a target relative luminance by moving its HSL lightness only.
+   Binary search, because luminance is neither linear in lightness nor the same across
+   hues — and driving luminance directly is what makes the tone lever strictly
+   monotonic instead of wobbling by a thousandth every few steps. */
+function setLum(c,want){
+  const H=hsl(hx(c)||'#FFFFFF');
+  let lo=0, hi=1;
+  for(let i=0;i<24;i++){
+    const mid=(lo+hi)/2;
+    if(lum(fromHsl(H[0],H[1],mid))<want) lo=mid; else hi=mid;
+  }
+  return fromHsl(H[0],H[1],(lo+hi)/2);
+}
+
+function hueGap(a,b){ const d=Math.abs(((a-b)%360+360)%360); return d>180?360-d:d; }
+
+/* Map one colour of the base theme onto the chosen one. Lightness is carried over
+   exactly — that is the whole trick. */
+function recolorOne(c,seed,tgt){
+  const x=hx(c); if(!x) return c;
+  if(chroma(x)<0.05) return x;                    /* paper, ink, greys: structure, not colour */
+  const H=hsl(x);
+  let bi=-1, bd=1e9;
+  for(let i=0;i<3;i++){
+    if(chroma(seed[i])<0.05) continue;
+    const d=hueGap(H[0],hsl(seed[i])[0]);
+    if(d<bd){ bd=d; bi=i; }
+  }
+  if(bi<0) return x;                              /* the theme had no colour to map from */
+  if(seed[bi].toUpperCase()===tgt[bi].toUpperCase()) return x;
+  if(chroma(tgt[bi])<0.05) return fromHsl(H[0],H[1]*0.10,H[2]);   /* swapped for a grey */
+  const s=hsl(seed[bi]), t=hsl(tgt[bi]);
+  return fromHsl(t[0]+(H[0]-s[0])*0.45,            /* keeps part of its own spread */
+                 clamp(H[1]+(t[1]-s[1])*0.75,0,1),
+                 H[2]);                            /* lightness untouched */
+}
+function recolorTheme(base,seed,tgt){
+  const out={ chat:deep(base.chat||{}), memo:deep(base.memo||{}) };
+  ['chat','memo'].forEach(function(half){
+    const o=out[half];
+    Object.keys(o).forEach(function(k){
+      if(typeof o[k]==='string' && /^#[0-9a-f]{6}$/i.test(o[k])) o[k]=recolorOne(o[k],seed,tgt);
+    });
+  });
+  return out;
+}
+
+/* Surfaces that ride along with the wallpaper's tone: [key, min separation, min text] */
+const TONE_SURF={
+  chat:[['meBg',1.18,4.85],['youBg',1.12,7.0],['barBg',0,6.2],['dateBg',0,4.6],['inputBg',0,0]],
+  memo:[['cardBg',1.09,9],['barBg',0,7.2],['tagBg',0,5.2]]
+};
+/* One lever, one axis. The wallpaper's tone slides toward paper-white and every
+   surface moves with it by the same amount, so the gaps that define the layout are
+   carried along rather than re-derived. */
+function toneTheme(th,paper){
+  const k=clamp((paper||0)/100,0,1);
+  if(k<=0) return th;
+  ['chat','memo'].forEach(function(half){
+    const o=th[half]; if(!o || !o.bg1) return;
+    const bg0=hx(o.bg1)||'#FFFFFF', H=hsl(bg0);
+    /* aim at a luminance, not a lightness, so every step of the slider lands paler
+       than the one before it whatever the hue */
+    const bg1=setLum(fromHsl(H[0],H[1]*(1-0.5*k),H[2]), lum(bg0)+(0.955-lum(bg0))*k);
+    const dL=hsl(bg1)[2]-H[2];
+    TONE_SURF[half].forEach(function(p){
+      const c=hx(o[p[0]]); if(!c) return;
+      const G=hsl(c);
+      o[p[0]]=fromHsl(G[0],G[1],clamp(G[2]+dL,0,1));   /* carried along by the same step */
+    });
+    o.bg1=bg1;
+    TONE_SURF[half].forEach(function(p){
+      if(p[1]>0) o[p[0]]=holdApart(o[p[0]],o.bg1,p[1],p[2]);
+    });
+  });
+  return th;
+}
+
+/* Guarantee legibility without throwing the theme's own colours away. Two rules:
+   each colour is only pushed as far as the ratio actually needs, and a colour the
+   swap never moved is left strictly alone — a hand-tuned theme has already been
+   vetted, and re-deriving it here would quietly redraw a theme the user only looked
+   at. So an untouched mixer reproduces its theme byte for byte. */
+function repairTheme(th,base){
+  const c=th.chat, m=th.memo;
+  const moved={};
+  if(base){
+    ['chat','memo'].forEach(function(half){
+      Object.keys(th[half]||{}).forEach(function(k){
+        moved[half+'.'+k] = th[half][k]!==(base[half]||{})[k];
+      });
+    });
+  }
+  const touched=function(half,keys){
+    if(!base) return true;
+    return keys.some(function(k){ return moved[half+'.'+k]; });
+  };
+  if(c){
+    if(touched('chat',['meBg','bg1']))     c.meBg  = holdApart(c.meBg, c.bg1, 1.16, 4.85);
+    if(touched('chat',['youBg','bg1']))    c.youBg = holdApart(c.youBg, c.bg1, 1.12, 7.0);
+    if(touched('chat',['barBg']))          c.barBg = fitFill(c.barBg, 6.2);
+    if(touched('chat',['dateBg']))         c.dateBg= fitFill(c.dateBg, 4.6);
+    if(touched('chat',['misBg']))          c.misBg = fitFill(c.misBg, 5.2);
+    if(touched('chat',['meText','meBg']))    c.meText  = ensure(c.meText, c.meBg, 4.6);
+    if(touched('chat',['youText','youBg']))  c.youText = ensure(c.youText, c.youBg, 7);
+    if(touched('chat',['barText','barBg']))  c.barText = ensure(c.barText, c.barBg, 6);
+    if(touched('chat',['dateText','dateBg']))c.dateText= ensure(c.dateText, c.dateBg, 5);
+    if(touched('chat',['misText','misBg']))  c.misText = ensure(c.misText, c.misBg, 5);
+    if(touched('chat',['nameCol','bg1']))    c.nameCol = ensure(c.nameCol, c.bg1, 3.4);
+    if(touched('chat',['timeCol','bg1']))    c.timeCol = ensure(c.timeCol, c.bg1, 2.6);
+    if(touched('chat',['readCol','bg1']))    c.readCol = ensure(c.readCol, c.bg1, 2.6);
+  }
+  if(m){
+    if(touched('memo',['cardBg','bg1'])) m.cardBg = holdApart(m.cardBg, m.bg1, 1.06, 9);
+    if(touched('memo',['barBg']))        m.barBg  = fitFill(m.barBg, 7.2);
+    if(touched('memo',['tagBg']))        m.tagBg  = fitFill(m.tagBg, 5.2);
+    if(touched('memo',['titleCol','cardBg'])) m.titleCol= ensure(m.titleCol, m.cardBg, 6.4);
+    if(touched('memo',['bodyCol','cardBg']))  m.bodyCol = ensure(m.bodyCol, m.cardBg, 4.8);
+    if(touched('memo',['subCol','cardBg']))   m.subCol  = ensure(m.subCol, m.cardBg, 3.3);
+    if(touched('memo',['barText','barBg']))   m.barText = ensure(m.barText, m.barBg, 7);
+    if(touched('memo',['tagText','tagBg']))   m.tagText = ensure(m.tagText, m.tagBg, 4.6);
+    if(touched('memo',['accent','cardBg']))   m.accent  = ensure(m.accent, m.cardBg, 2.6);
+  }
+  return th;
+}
 
 function mixerTheme(m){
   m=Object.assign({},MIX_DEF,m||{});
-  const act=mixColors(m), n=act.length;
-  const A=act[0], B=act[1%n], C=act[2%n];
-  const W = m.white!==false ? '#FFFFFF' : byLum(act,-1);
-  const K = m.black!==false ? '#111111' : byLum(act,1);
-  const tint = m.tint!==false;
-  const pm = clamp((m.paperMix==null?78:m.paperMix)/100, 0, 0.94);
-
-  /* ---------- chat ---------- */
-  const bg   = tint ? mix(B,W,pm) : B;
-  const dark = lum(bg)<0.42;
-  const me   = settleFill(A, bg, 1.22, 4.85, null);
-  const you  = settleFill(dark ? mix(bg,W,0.16) : mix(bg,W,0.86), bg, 1.16, 7.2, 'light');
-  const bar  = fitFill(dark ? mix(bg,W,0.11) : mix(bg,W,0.55), 6.2);
-  const dchip= fitFill(dark ? mix(bg,W,0.15) : mix(bg,K,0.28), 4.6);
-  const misB = fitFill(C,5.2);
-  const chat={
-    bgType:'solid', bg1:bg, bg2:autoGrad(bg,me,dark), bg2auto:true,
-    bgAngle:160, bgImg:'', bgDim:0,
-    barBg:bar, barText:ensure(readable(bar),bar,6), barLine:!dark,
-    meBg:me,  meText:ensure(readable(me),me,4.6),
-    youBg:you, youText:ensure(readable(you),you,7),
-    nameCol:ensure(dark?mix(W,bg,0.28):mix(K,bg,0.10),bg,3.4),
-    timeCol:ensure(mix(readable(bg),bg,0.42),bg,2.6),
-    dateBg:dchip, dateText:ensure(readable(dchip),dchip,5),
-    misBg:misB, misText:ensure(readable(misB),misB,5),
-    radius:16, fontSize:15, nameSize:12.5, timeSize:10.5, barSize:16.5,
-    tail:true, avatar:true, avatarR:14, avatarSize:38,
-    showInput:true, inputBg: dark?mix(bg,W,0.10):mix(bar,W,0.6),
-    showHome:true, statusDark:!dark, showRead:true, readLabel:'읽음',
-    readCol:ensure(bestAccent(bg, null, act), bg, 2.6)
-  };
-
-  /* ---------- memo ---------- */
-  const chrom=act.slice().sort(function(x,y){ return chroma(y)-chroma(x); })[0];
-  let mbg, card;
-  if(dark){
-    mbg  = mix(bg,'#000000',0.22);
-    card = mix(bg,'#FFFFFF',0.085);
-  }else{
-    mbg = mix(chrom,'#FFFFFF',0.52);
-    let g=0; while(lum(mbg)<0.80 && g++<24) mbg=mix(mbg,'#FFFFFF',0.11);
-    card = mix(W,'#FFFFFF',0.55);
-  }
-  /* settle the card FIRST so text sits on it, THEN separate it from the page —
-     the other order lets fitFill drag the card back into the page it just left */
-  card = fitFill(card, 9);
-  let g2=0;
-  while(contrast(card,mbg)<1.10 && g2++<90){
-    if(!dark && lum(card)<0.93){ card=mix(card,'#FFFFFF',0.07); continue; }
-    /* push the page away from whichever side the card is on: monotonic, always converges */
-    mbg = mix(mbg, lum(card)>0.5 ? '#000000' : '#FFFFFF', 0.05);
-  }
-  const mtitle=ensure(dark?'#F4F6F8':K, card, 6.4);
-  const macc=vividOn(bestAccent(card, null, act), card, 2.6, dark);
-  const tagBg=fitFill(mix(card,macc,dark?0.32:0.30),5.2);
-  const memo={
-    bgType:'solid', bg1:mbg, bg2:autoGrad(mbg,macc,dark), bg2auto:true, bgAngle:160, bgImg:'', bgDim:0,
-    barBg:fitFill(mbg,7.2), barText:ensure(mtitle,fitFill(mbg,7.2),7), barLine:true,
-    cardBg:card, titleCol:mtitle, bodyCol:ensure(mix(mtitle,card,0.22),card,4.8),
-    subCol:ensure(mix(mtitle,card,0.46),card,3.3),
-    accent:macc, tagBg:tagBg, tagText:ensure(readable(tagBg),tagBg,4.6),
-    radius:14, fontSize:15, titleSize:22, listTitleSize:15.5, subSize:12.5, bigSize:31, barSize:16.5,
-    paper:'none', statusDark:!dark, showSearch:true, showHome:true
-  };
-
-  return { chat:Object.assign(deep(CHAT_DEF),chat), memo:Object.assign(deep(MEMO_DEF),memo) };
+  const base = mixUsable(m) ? m.base : { chat:deep(CHAT_DEF), memo:deep(MEMO_DEF) };
+  const seed = mixUsable(m) ? m.seed : themeSeed(base);
+  const out  = recolorTheme(base, seed, mixTargets(m));
+  toneTheme(out, m.paper);
+  repairTheme(out, base);
+  if(out.chat.bg2auto!==false && out.chat.bg1!==base.chat.bg1)
+    out.chat.bg2=autoGrad(out.chat.bg1,out.chat.meBg,lum(out.chat.bg1)<0.42);
+  if(out.memo.bg2auto!==false && out.memo.bg1!==base.memo.bg1)
+    out.memo.bg2=autoGrad(out.memo.bg1,out.memo.accent,lum(out.memo.bg1)<0.42);
+  return { chat:Object.assign(deep(CHAT_DEF),out.chat), memo:Object.assign(deep(MEMO_DEF),out.memo) };
 }
 
 /* ---- hand-tuned signature themes ---- */
@@ -2209,7 +2332,12 @@ const DUO_PAL=[
  ['lilaclemon','라일락 & 레몬',['#6A5AA8','#9C8FD4','#E8D264','#FAF6E2']],
  ['rustsky','녹빛 & 하늘',     ['#8A4230','#C2714F','#7FB2D8','#F6F0E9']],
  ['mossblush','이끼 & 블러시', ['#4A5D3A','#7E9663','#E7AEA6','#F7F3EC']],
- ['charcoalmint','차콜 & 민트',['#25292E','#4A525C','#7ED9C3','#F1F5F3']]
+ ['charcoalmint','차콜 & 민트',['#25292E','#4A525C','#7ED9C3','#F1F5F3']],
+ /* kakao's shape — calm wallpaper, warm bubble — rebuilt on mint and on blue */
+ ['mintlemon','민트 & 레몬', ['#11504A','#2E8F84','#FFD426','#7FD1BD'],
+   {accent:'#FFD426', bg:'#7FD1BD', memoTint:'#2E8F84'}],
+ ['bluelemon','블루 & 레몬', ['#12395F','#2E6EA8','#FFD426','#8FC8E6'],
+   {accent:'#FFD426', bg:'#8FC8E6', memoTint:'#2E6EA8'}]
 ];
 /* hue, saturation, lightness tuned per colour — a yellow at mid lightness turns olive */
 const MONO=[['red','빨강',4,0.82,0.55],['orange','주황',27,0.94,0.55],['yellow','노랑',48,0.97,0.56],
@@ -2227,7 +2355,7 @@ function buildThemes(){
   });
   MONO.forEach(function(m){ const t=monoTheme('mono-'+m[0],m[1],m[2],m[3],m[4]); t.grp='단색'; out.push(t); });
   SHOT_PAL.forEach(function(p){ const t=themeFromPalette('sh-'+p[0],p[1],p[2],{}); t.grp='팔레트'; out.push(t); });
-  DUO_PAL.forEach(function(p){ const t=themeFromPalette('duo-'+p[0],p[1],p[2],{}); t.grp='2색'; out.push(t); });
+  DUO_PAL.forEach(function(p){ const t=themeFromPalette('duo-'+p[0],p[1],p[2],p[3]||{}); t.grp='2색'; out.push(t); });
   out.forEach(function(t){
     t.chat=Object.assign({},CHAT_DEF,t.chat);
     t.memo=Object.assign({},MEMO_DEF,t.memo);
@@ -4327,14 +4455,21 @@ function applyTheme(t){
   S.theme.chat=Object.assign(deep(CHAT_DEF),deep(t.chat||{}));
   S.theme.memo=Object.assign(deep(MEMO_DEF),deep(t.memo||{}));
   S.themeId=t.id;
-  paintThemeGrid(); paintThemeFold(); paintThemeEditor(true); renderAll();
+  reseedMixer();                       /* the mixer follows whatever is on screen */
+  paintThemeGrid(); paintThemeFold(); paintThemeEditor(true); paintMixer(); renderAll();
   toast(t.name+' 테마를 적용했습니다');
 }
 
 /* ============================================================
    COLOUR MIXER UI  —  sits right under the theme grid
    ============================================================ */
-function mixState(){ if(!S.mixer) S.mixer=deep(MIX_DEF); return S.mixer; }
+/* The mixer always starts from the theme that is on screen. Anything saved by an
+   older build has no base snapshot, so it gets re-seeded rather than trusted. */
+function mixState(){
+  if(!mixUsable(S.mixer)) S.mixer=seedMixer(S.theme,S.themeId);
+  return S.mixer;
+}
+function reseedMixer(){ S.mixer=seedMixer(S.theme,S.themeId); }
 function applyMixer(){
   const t=mixerTheme(mixState());
   S.theme.chat=t.chat; S.theme.memo=t.memo; S.themeId='';
@@ -4398,18 +4533,8 @@ function paintMixer(){
   box.appendChild(mixColorRow('보조색 1','c2','on2'));
   box.appendChild(mixColorRow('보조색 2','c3','on3'));
 
-  const nb=el('div','chips'); nb.style.margin='11px 0 4px';
-  [['white','흰색 섞기'],['black','검정 섞기'],['tint','배경 물들이기']].forEach(function(p){
-    const c=el('button','chip'+(m[p[0]]!==false?' is-on':''),p[1]);
-    on(c,'click',function(){ m[p[0]]=(m[p[0]]===false); applyMixer(); paintMixer(); });
-    nb.appendChild(c);
-  });
-  box.appendChild(nb);
-
-  if(m.tint!==false){
-    box.appendChild(sldPlain('배경 연하기',()=>m.paperMix,function(v){ m.paperMix=v; },20,94,2,'%',
-      function(){ applyMixerSoon(); }, function(){ applyMixer(); paintMixer(); }));
-  }
+  box.appendChild(sldPlain('배경 연하기',()=>m.paper||0,function(v){ m.paper=v; },0,100,2,'%',
+    function(){ applyMixerSoon(); }, function(){ applyMixer(); paintMixer(); }));
 
   /* what each colour is currently doing */
   const act=mixColors(m);
@@ -4428,9 +4553,17 @@ function paintMixer(){
   });
   box.appendChild(sh);
 
+  const rs=el('button','btn block'); rs.style.marginTop='7px';
+  rs.innerHTML=ico('undo',16)+'테마 색으로 되돌리기';
+  on(rs,'click',function(){
+    reseedMixer(); applyMixer(); paintMixer();
+    toast('테마의 원래 색으로 되돌렸습니다');
+  });
+  box.appendChild(rs);
+
   const h=el('p','hint');
-  h.innerHTML='고른 색은 그대로 두고 <b>어느 색이 어느 자리에 들어갈지</b>만 섞습니다. '+
-              '어떤 조합이 나와도 글자 대비는 자동으로 맞춰집니다.';
+  h.innerHTML='지금 고른 테마의 색이 그대로 올라와 있습니다. 색을 바꾸면 <b>미리보기의 색 배치는 그대로</b> 둔 채 '+
+              '색만 갈아 끼웁니다. 어떤 조합이 나와도 글자 대비는 자동으로 맞춰집니다.';
   h.style.marginTop='9px';
   box.appendChild(h);
 }
@@ -4902,7 +5035,7 @@ function wire(){
   on($('#btnThFold'),'click',function(){ S.thFold=!S.thFold; paintThemeFold(); save(); });
   on($('#btnMixFold'),'click',function(){ S.mixFold=!S.mixFold; paintMixer(); save(); });
   on($('#btnMixReset'),'click',function(){
-    S.mixer=deep(MIX_DEF); applyMixer(); paintMixer(); toast('색 조합을 기본값으로 되돌렸습니다');
+    reseedMixer(); applyMixer(); paintMixer(); toast('색 조합을 테마 기본값으로 되돌렸습니다');
   });
   on($('#btnFoldAll'),'click',function(){
     const folds=$$('#thEditor .fold');

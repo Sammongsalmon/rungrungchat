@@ -100,14 +100,21 @@ function applyTheme(t){
   S.theme.chat=Object.assign(deep(CHAT_DEF),deep(t.chat||{}));
   S.theme.memo=Object.assign(deep(MEMO_DEF),deep(t.memo||{}));
   S.themeId=t.id;
-  paintThemeGrid(); paintThemeFold(); paintThemeEditor(true); renderAll();
+  reseedMixer();                       /* the mixer follows whatever is on screen */
+  paintThemeGrid(); paintThemeFold(); paintThemeEditor(true); paintMixer(); renderAll();
   toast(t.name+' 테마를 적용했습니다');
 }
 
 /* ============================================================
    COLOUR MIXER UI  —  sits right under the theme grid
    ============================================================ */
-function mixState(){ if(!S.mixer) S.mixer=deep(MIX_DEF); return S.mixer; }
+/* The mixer always starts from the theme that is on screen. Anything saved by an
+   older build has no base snapshot, so it gets re-seeded rather than trusted. */
+function mixState(){
+  if(!mixUsable(S.mixer)) S.mixer=seedMixer(S.theme,S.themeId);
+  return S.mixer;
+}
+function reseedMixer(){ S.mixer=seedMixer(S.theme,S.themeId); }
 function applyMixer(){
   const t=mixerTheme(mixState());
   S.theme.chat=t.chat; S.theme.memo=t.memo; S.themeId='';
@@ -171,18 +178,8 @@ function paintMixer(){
   box.appendChild(mixColorRow('보조색 1','c2','on2'));
   box.appendChild(mixColorRow('보조색 2','c3','on3'));
 
-  const nb=el('div','chips'); nb.style.margin='11px 0 4px';
-  [['white','흰색 섞기'],['black','검정 섞기'],['tint','배경 물들이기']].forEach(function(p){
-    const c=el('button','chip'+(m[p[0]]!==false?' is-on':''),p[1]);
-    on(c,'click',function(){ m[p[0]]=(m[p[0]]===false); applyMixer(); paintMixer(); });
-    nb.appendChild(c);
-  });
-  box.appendChild(nb);
-
-  if(m.tint!==false){
-    box.appendChild(sldPlain('배경 연하기',()=>m.paperMix,function(v){ m.paperMix=v; },20,94,2,'%',
-      function(){ applyMixerSoon(); }, function(){ applyMixer(); paintMixer(); }));
-  }
+  box.appendChild(sldPlain('배경 연하기',()=>m.paper||0,function(v){ m.paper=v; },0,100,2,'%',
+    function(){ applyMixerSoon(); }, function(){ applyMixer(); paintMixer(); }));
 
   /* what each colour is currently doing */
   const act=mixColors(m);
@@ -201,9 +198,17 @@ function paintMixer(){
   });
   box.appendChild(sh);
 
+  const rs=el('button','btn block'); rs.style.marginTop='7px';
+  rs.innerHTML=ico('undo',16)+'테마 색으로 되돌리기';
+  on(rs,'click',function(){
+    reseedMixer(); applyMixer(); paintMixer();
+    toast('테마의 원래 색으로 되돌렸습니다');
+  });
+  box.appendChild(rs);
+
   const h=el('p','hint');
-  h.innerHTML='고른 색은 그대로 두고 <b>어느 색이 어느 자리에 들어갈지</b>만 섞습니다. '+
-              '어떤 조합이 나와도 글자 대비는 자동으로 맞춰집니다.';
+  h.innerHTML='지금 고른 테마의 색이 그대로 올라와 있습니다. 색을 바꾸면 <b>미리보기의 색 배치는 그대로</b> 둔 채 '+
+              '색만 갈아 끼웁니다. 어떤 조합이 나와도 글자 대비는 자동으로 맞춰집니다.';
   h.style.marginTop='9px';
   box.appendChild(h);
 }

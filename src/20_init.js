@@ -160,7 +160,7 @@ function wire(){
   on($('#btnThFold'),'click',function(){ S.thFold=!S.thFold; paintThemeFold(); save(); });
   on($('#btnMixFold'),'click',function(){ S.mixFold=!S.mixFold; paintMixer(); save(); });
   on($('#btnMixReset'),'click',function(){
-    S.mixer=deep(MIX_DEF); applyMixer(); paintMixer(); toast('색 조합을 기본값으로 되돌렸습니다');
+    reseedMixer(); applyMixer(); paintMixer(); toast('색 조합을 테마 기본값으로 되돌렸습니다');
   });
   on($('#btnFoldAll'),'click',function(){
     const folds=$$('#thEditor .fold');

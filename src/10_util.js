@@ -48,6 +48,7 @@ const ICO={
  warn:'<path d="M12 4.5 2.8 20h18.4L12 4.5Z"/><path d="M12 10v4.2"/><circle cx="12" cy="17.2" r=".9" fill="currentColor" stroke="none"/>',
  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".9" fill="currentColor" stroke="none"/>',
  pin:'<path d="M9 4h6l-.8 5.2 3 2.6V14H6.8v-2.2l3-2.6L9 4ZM12 14v6"/>',
+ undo:'<path d="M4.5 9.5h9a5.5 5.5 0 1 1 0 11H8.5"/><path d="m8.5 5.5-4 4 4 4"/>',
  dice:'<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.6" cy="8.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.4" cy="15.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.4" cy="8.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="8.6" cy="15.4" r="1.35" fill="currentColor" stroke="none"/>',
  drop:'<path d="M12 3.2s6 6.6 6 10.4a6 6 0 0 1-12 0C6 9.8 12 3.2 12 3.2Z"/>'
 };
