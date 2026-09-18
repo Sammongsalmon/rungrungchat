@@ -86,9 +86,13 @@ const PROPS=('display,position,top,right,bottom,left,width,height,min-width,min-
 'transform,transform-origin,box-shadow,text-shadow,filter,object-fit,list-style-type,'+
 '-webkit-text-fill-color,-webkit-text-stroke-color,-webkit-text-stroke-width').split(',');
 
+/* Properties left out of PDEF are always written out. Margins and paddings MUST be:
+   "not declared" would mean "whatever the browser's own stylesheet says", and the
+   clone lands in a bare document where the app's reset (h1..h4,p,figure{margin:0};
+   ul,ol{margin:0;padding:0}) does not exist. Skipping margin-top:0px on the memo
+   heading handed it back the UA default h2{margin-block:0.83em} = 0.83x31 = 25.73px,
+   which dropped the title onto the search bar and pushed the cards down with it. */
 const PDEF={'background-image':'none','box-shadow':'none','text-shadow':'none','transform':'none','filter':'none',
-'margin-top':'0px','margin-right':'0px','margin-bottom':'0px','margin-left':'0px',
-'padding-top':'0px','padding-right':'0px','padding-bottom':'0px','padding-left':'0px',
 'border-top-width':'0px','border-right-width':'0px','border-bottom-width':'0px','border-left-width':'0px',
 'border-top-style':'none','border-right-style':'none','border-bottom-style':'none','border-left-style':'none',
 'border-top-left-radius':'0px','border-top-right-radius':'0px','border-bottom-right-radius':'0px','border-bottom-left-radius':'0px',
@@ -149,7 +153,19 @@ function inlineTree(src,dst){
     for(let j=0;j<PROPS.length;j++){
       const p=PROPS[j];
       if(oneLine && (p==='width' || p==='white-space')) continue;
+      /* Floor the height, don't freeze it. A pinned `height` stops a child's bottom
+         margin from collapsing out of its parent, so the next sibling sits higher in
+         the clone than in the preview (the memo list's rows lost their 3px gap). A
+         min-height keeps the box from shrinking and lets it grow if this document
+         needs one more line, instead of clipping it. */
+      if(p==='height') continue;
       const v=cs.getPropertyValue(p);
+      if(p==='min-height'){
+        const hv=parseFloat(cs.height), mv=parseFloat(v);
+        const use=Math.max(isFinite(hv)?hv:0, isFinite(mv)?mv:0);
+        if(use>0) css+='min-height:'+use+'px;';
+        continue;
+      }
       if(v==='' ) continue;
       if(PDEF[p]!=null && v===PDEF[p]) continue;
       css+=p+':'+v+';';
@@ -178,6 +194,13 @@ function nodeToSvg(node){
   clone.style.margin='0'; clone.style.transform='none'; clone.style.boxShadow='none';
   clone.style.position='relative'; clone.style.left='0'; clone.style.top='0';
   clone.style.width=w+'px'; clone.style.minHeight=h+'px'; clone.style.height=h+'px';
+  /* Inherited text properties the app sets on <body>/.pv but PROPS does not carry.
+     Without them the SVG document shapes the same font differently — and, having no
+     viewport of its own, Android Chrome is free to boost its font sizes. */
+  clone.style.setProperty('-webkit-text-size-adjust','100%');
+  clone.style.setProperty('text-size-adjust','100%');
+  clone.style.setProperty('text-rendering','optimizeLegibility');
+  clone.style.setProperty('-webkit-font-smoothing','antialiased');
   const xml=new XMLSerializer().serializeToString(clone);
   return {w:w,h:h,xml:xml};
 }
