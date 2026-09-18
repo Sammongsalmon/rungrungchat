@@ -177,6 +177,176 @@ function switchRow(title,desc,get,set){
   r._sync=paint;
   return r;
 }
+/* ============================================================
+   INLINE COLOUR PICKER  (HSV plane + hue strip + hex + swatches)
+   Same interaction model as the reference picker, restyled for this app and
+   extended with the thing this tool actually cares about: a live contrast
+   readout against whatever the colour will sit on.
+   ============================================================ */
+const CP_QUICK=['#FFFFFF','#F2F3F5','#9AA1AB','#3E444C','#111111',
+                '#FF4D4F','#FF7A45','#FFC53D','#73D13D','#36CFC9',
+                '#3B82F6','#6E56CF','#C13DBE','#F2668B','#8C6239','#0E7490'];
+const CP_OPEN=[];
+function cpCloseAll(except){
+  CP_OPEN.forEach(function(n){ if(n!==except) n.classList.remove('open'); });
+}
+on(document,'pointerdown',function(e){
+  if(!e.target.closest || !e.target.closest('.cp')) cpCloseAll(null);
+});
+
+/* label, get()->hex, set(hex), against()->hex|null (the surface it sits on) */
+function colorControl(label,get,set,against,minRatio){
+  minRatio=minRatio||4.5;
+  const root=el('div','cp');
+  CP_OPEN.push(root);
+
+  const trig=el('button','cp-trig');
+  const sw=el('span','cp-sw');
+  const nm=el('span','cp-name',label);
+  const val=el('span','cp-val');
+  const warn=el('span','cp-warn'); warn.innerHTML=ico('warn',14);
+  const chev=el('span','cp-chev'); chev.innerHTML=ico('chev',13);
+  [sw,nm,val,warn,chev].forEach(function(n){ trig.appendChild(n); });
+  root.appendChild(trig);
+
+  const pop=el('div','cp-pop');
+  const plane=el('div','cp-plane'); const pcur=el('span','cp-pcur'); plane.appendChild(pcur);
+  const hue=el('div','cp-hue'); const hcur=el('span','cp-hcur'); hue.appendChild(hcur);
+  const row=el('div','cp-row');
+  const hexI=document.createElement('input');
+  hexI.className='cp-hex'; hexI.maxLength=7; hexI.spellcheck=false; hexI.setAttribute('aria-label',label+' HEX');
+  const copy=el('button','cp-copy','복사');
+  row.appendChild(hexI); row.appendChild(copy);
+  const meta=el('div','cp-meta');
+  const rRgb=el('div','cp-read'); rRgb.innerHTML='<small>RGB</small><b></b>';
+  const rHsl=el('div','cp-read'); rHsl.innerHTML='<small>HSL</small><b></b>';
+  const rCon=el('div','cp-read'); rCon.innerHTML='<small>대비</small><b></b>';
+  meta.appendChild(rRgb); meta.appendChild(rHsl);
+  if(against) meta.appendChild(rCon);
+  const quick=el('div','cp-quick');
+  [plane,hue,row,meta,quick].forEach(function(n){ pop.appendChild(n); });
+  root.appendChild(pop);
+
+  /* keep the hue the user was on even when saturation drops to zero */
+  let hsv={h:270,s:0.8,v:0.8};
+
+  function paint(){
+    const v=hx(get())||'#000000';
+    const nx=rgbToHsv(v);
+    if(nx.s>0.001) hsv.h=nx.h;
+    hsv.s=nx.s; hsv.v=nx.v;
+
+    sw.style.background=v;
+    val.textContent=v;
+    if(document.activeElement!==hexI) hexI.value=v;
+    plane.style.background='linear-gradient(to top,#000,transparent),'+
+                           'linear-gradient(to right,#fff,hsl('+Math.round(hsv.h)+',100%,50%))';
+    pcur.style.left=(hsv.s*100)+'%';
+    pcur.style.top=((1-hsv.v)*100)+'%';
+    pcur.style.background=v;
+    hcur.style.left=((hsv.h/360)*100)+'%';
+
+    const p=rgb(v), hl=hsl(v);
+    $('b',rRgb).textContent=p[0]+', '+p[1]+', '+p[2];
+    $('b',rHsl).textContent=Math.round(hl[0])+'°, '+Math.round(hl[1]*100)+'%, '+Math.round(hl[2]*100)+'%';
+    if(against){
+      const bgc=against();
+      const c=bgc?contrast(v,bgc):0;
+      const ok=c>=minRatio;
+      $('b',rCon).textContent=bgc?(c.toFixed(1)+':1'):'—';
+      rCon.className='cp-read '+(bgc?(ok?'ok':'bad'):'');
+      root.classList.toggle('low', !!bgc && !ok);
+      warn.title='대비 '+c.toFixed(1)+':1 — 읽기 어려울 수 있습니다';
+    }
+    paintQuick();
+  }
+
+  function paintQuick(){
+    const cur=(hx(get())||'').toUpperCase();
+    const roles=[];
+    if(S.mixer){
+      const m=S.mixer;
+      [[m.c1,'테마색'],[m.on2!==false?m.c2:null,'보조 1'],[m.on3!==false?m.c3:null,'보조 2']]
+        .forEach(function(r){ const c=hx(r[0]); if(c && !roles.some(function(x){return x.c===c;})) roles.push({c:c,l:r[1]}); });
+    }
+    const list=roles.concat(
+      CP_QUICK.map(function(c){return {c:hx(c),l:''};})
+              .filter(function(o){ return !roles.some(function(r){return r.c===o.c;}); })
+    ).slice(0,24);
+    quick.innerHTML='';
+    list.forEach(function(o){
+      const b=el('button','cp-q'+(o.l?' role':''));
+      b.style.setProperty('--qc',o.c);
+      b.title=o.l?(o.l+' · '+o.c):o.c;
+      b.setAttribute('aria-label',b.title);
+      if(o.c===cur) b.style.outline='2px solid var(--ink)';
+      on(b,'click',function(){ commit(o.c); });
+      quick.appendChild(b);
+    });
+  }
+
+  function commit(v,live){
+    const c=hx(v); if(!c) return;
+    set(c,live); paint();
+  }
+  function fromPlane(e){
+    const r=plane.getBoundingClientRect();
+    hsv.s=clamp((e.clientX-r.left)/Math.max(1,r.width),0,1);
+    hsv.v=1-clamp((e.clientY-r.top)/Math.max(1,r.height),0,1);
+    commit(hsvToHex(hsv),true);
+  }
+  function fromHue(e){
+    const r=hue.getBoundingClientRect();
+    hsv.h=clamp((e.clientX-r.left)/Math.max(1,r.width),0,1)*360;
+    commit(hsvToHex(hsv),true);
+  }
+  /* pointer capture so dragging off the surface keeps tracking */
+  function surface(node,fn){
+    on(node,'pointerdown',function(e){
+      e.preventDefault(); node.setPointerCapture&&node.setPointerCapture(e.pointerId); fn(e);
+    });
+    on(node,'pointermove',function(e){
+      if(node.hasPointerCapture&&node.hasPointerCapture(e.pointerId)) fn(e);
+    });
+    on(node,'pointerup',function(e){
+      try{ node.releasePointerCapture&&node.releasePointerCapture(e.pointerId); }catch(_){}
+      commit(hsvToHex(hsv),false);
+    });
+  }
+  surface(plane,fromPlane);
+  surface(hue,fromHue);
+
+  on(trig,'click',function(e){
+    e.preventDefault();
+    const opening=!root.classList.contains('open');
+    cpCloseAll(root);
+    root.classList.toggle('open',opening);
+    trig.setAttribute('aria-expanded',String(opening));
+    if(opening) paint();
+  });
+  on(hexI,'change',function(){
+    const v=hx(hexI.value);
+    if(v) commit(v,false); else { paint(); toast('#RRGGBB 형식으로 입력해 주세요','warn'); }
+  });
+  on(hexI,'keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); hexI.blur(); } });
+  on(hexI,'blur',paint);
+  on(copy,'click',async function(){
+    const v=hx(get())||'';
+    try{ await navigator.clipboard.writeText(v); }
+    catch(e){
+      const t=document.createElement('textarea'); t.value=v;
+      t.style.cssText='position:fixed;opacity:0'; document.body.appendChild(t);
+      t.select(); try{ document.execCommand('copy'); }catch(_){}
+      t.remove();
+    }
+    toast(v+' 복사됨');
+  });
+
+  paint();
+  root._sync=paint;
+  return root;
+}
+
 function colorRow(label,get,set,warnAgainst){
   const r=el('div','col-row');
   const sw=el('label','col-sw');

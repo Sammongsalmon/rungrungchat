@@ -649,6 +649,24 @@ html[data-ui="dark"] .sld-bub{color:#15171B}
 .mix-lab{font-size:11px;font-weight:650;color:var(--text-3);letter-spacing:-.01em}
 #mixUI .col-row .chip{min-height:30px;padding:5px 10px;font-size:12px}
 
+/* export results — a manual way out when the browser blocks auto-downloads */
+#exportOut{margin-top:14px}
+.dl-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.dl-item{
+  display:flex;align-items:center;gap:10px;padding:7px 10px;text-decoration:none;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);
+  color:var(--text);transition:border-color .15s,background .15s;
+}
+.dl-item:hover{border-color:var(--accent);background:var(--accent-soft)}
+.dl-item img{
+  width:30px;height:44px;object-fit:cover;object-position:top;border-radius:5px;flex:0 0 auto;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);background:#fff;
+}
+.dl-item .dl-n{flex:1 1 auto;min-width:0;font-size:12.5px;font-weight:600;letter-spacing:-.01em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dl-item .dl-s{flex:0 0 auto;font-size:11px;color:var(--text-3);font-variant-numeric:tabular-nums}
+.dl-item svg{flex:0 0 auto;width:16px;height:16px;color:var(--text-3)}
+
 /* ============================================================
    8. MISC
    ============================================================ */
@@ -715,6 +733,87 @@ html[data-ui="dark"] .toast{color:#15171B}
   border:2.5px solid var(--surface-3);border-top-color:var(--accent);animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .busy-box p{font-size:13.5px;font-weight:600;color:var(--text-2)}
+
+
+/* ============================================================
+   9b. INLINE COLOUR PICKER
+   ============================================================ */
+.cp{position:relative;margin-bottom:8px}
+.cp:last-child{margin-bottom:0}
+.cp-trig{
+  width:100%;display:flex;align-items:center;gap:10px;padding:7px 10px;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);
+  transition:border-color .16s,background .16s;text-align:left;
+}
+.cp-trig:hover{border-color:var(--text-4)}
+.cp.open .cp-trig{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.cp-sw{
+  flex:0 0 auto;width:28px;height:28px;border-radius:8px;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);
+}
+.cp-name{flex:1 1 auto;min-width:0;font-size:13px;font-weight:550;color:var(--text-2);
+  letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cp-val{flex:0 0 auto;font-family:var(--mono);font-size:11.5px;color:var(--text-3)}
+.cp-warn{flex:0 0 auto;display:none;color:var(--danger)}
+.cp.low .cp-warn{display:flex}
+.cp.low .cp-name{color:var(--danger)}
+.cp-chev{flex:0 0 auto;display:flex;color:var(--text-4);transition:transform .22s cubic-bezier(.22,1,.36,1)}
+.cp.open .cp-chev{transform:rotate(90deg)}
+
+.cp-pop{
+  display:none;margin-top:7px;padding:12px;border-radius:var(--r-md);
+  border:1px solid var(--line);background:var(--surface-2);
+}
+.cp.open .cp-pop{display:block;animation:paneIn .2s cubic-bezier(.22,1,.36,1)}
+.cp-plane{
+  position:relative;height:132px;border-radius:10px;cursor:crosshair;touch-action:none;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);
+}
+.cp-pcur{
+  position:absolute;width:16px;height:16px;border-radius:99px;transform:translate(-50%,-50%);
+  border:2.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35),0 1px 4px rgba(0,0,0,.3);
+  pointer-events:none;
+}
+.cp-hue{
+  position:relative;height:16px;margin-top:11px;border-radius:99px;cursor:pointer;touch-action:none;
+  background:linear-gradient(to right,#f00 0%,#ff0 17%,#0f0 33%,#0ff 50%,#00f 67%,#f0f 83%,#f00 100%);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.12);
+}
+.cp-hcur{
+  position:absolute;top:50%;width:18px;height:18px;border-radius:99px;transform:translate(-50%,-50%);
+  background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.28),0 1px 4px rgba(0,0,0,.28);pointer-events:none;
+}
+.cp-row{display:flex;gap:6px;margin-top:11px}
+.cp-hex{
+  flex:1 1 auto;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-xs);
+  background:var(--surface);font-family:var(--mono);font-size:12.5px;text-transform:uppercase;
+}
+.cp-hex:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.cp-copy{
+  flex:0 0 auto;padding:0 11px;border:1px solid var(--line);border-radius:var(--r-xs);
+  background:var(--surface);font-size:12.5px;font-weight:600;color:var(--text-2);transition:all .15s;
+}
+.cp-copy:hover{background:var(--surface-3);color:var(--text)}
+.cp-meta{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
+.cp-read{
+  flex:1 1 auto;min-width:82px;padding:6px 9px;border-radius:var(--r-xs);background:var(--surface);
+  border:1px solid var(--line-soft);
+}
+.cp-read small{display:block;font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--text-4)}
+.cp-read b{display:block;font-size:11.5px;font-weight:650;font-variant-numeric:tabular-nums;margin-top:1px}
+.cp-read.ok b{color:var(--ok)}
+.cp-read.bad b{color:var(--danger)}
+.cp-quick{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-top:10px}
+.cp-q{
+  aspect-ratio:1/1;border-radius:7px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14);
+  background:var(--qc);transition:transform .14s;position:relative;
+}
+.cp-q:hover{transform:scale(1.1)}
+.cp-q.role{box-shadow:inset 0 0 0 1px rgba(0,0,0,.14),0 0 0 2px var(--accent)}
+.cp-qlab{
+  grid-column:1/-1;font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--text-4);
+  margin-top:2px;
+}
 
 /* ============================================================
    9. PHONE PREVIEW  —  NO pseudo-elements anywhere below this line
@@ -1018,14 +1117,14 @@ html[data-ui="dark"] .toast{color:#15171B}
             <div class="sec-h">
               <span class="sec-t">원본 붙여넣기</span>
               <div class="sec-x">
-                <button class="btn sm ghost" id="btnSample" data-ico-pre="sparkle">예시</button>
+                <button class="btn sm ghost danger" id="btnClearRaw" data-ico-pre="trash">비우기</button>
                 <button class="btn sm ghost" id="btnPaste" data-ico-pre="clipboard">붙여넣기</button>
               </div>
             </div>
             <textarea class="ta mono" id="raw" rows="11" spellcheck="false"
               placeholder="AI가 출력한 내용을 통째로 붙여넣으세요.&#10;OOC 지시문·하단 메타정보·details 블록은 자동으로 걸러집니다."></textarea>
             <div class="btn-row" style="margin-top:8px">
-              <button class="btn sm ghost danger" id="btnClearRaw" data-ico-pre="trash">비우기</button>
+              <button class="btn sm ghost" id="btnSample" data-ico-pre="sparkle">예시 다시 넣기</button>
               <span style="flex:1"></span>
               <button class="btn sm ink-btn" id="btnParse" data-ico-pre="wand">다시 분석</button>
             </div>
@@ -1209,6 +1308,7 @@ html[data-ui="dark"] .toast{color:#15171B}
               <p class="hint" id="sizeHint"></p>
             </div>
             <button class="btn lg ink-btn block" id="btnExport" data-ico-pre="download" style="margin-top:14px">PNG로 저장</button>
+            <div id="exportOut"></div>
           </div>
 
           <hr class="hr">
@@ -1356,6 +1456,26 @@ function fromHsl(h,s,l){
   return hex((r+m)*255,(g+m)*255,(b+m)*255);
 }
 function rgba(c,a){const p=rgb(c);return 'rgba('+p[0]+','+p[1]+','+p[2]+','+a+')';}
+function rgbToHsv(c){
+  const p=rgb(c).map(v=>v/255), r=p[0],g=p[1],b=p[2];
+  const mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn;
+  let h=0;
+  if(d){
+    if(mx===r) h=60*(((g-b)/d)%6);
+    else if(mx===g) h=60*((b-r)/d+2);
+    else h=60*((r-g)/d+4);
+  }
+  if(h<0) h+=360;
+  return {h:h, s:mx===0?0:d/mx, v:mx};
+}
+function hsvToHex(o){
+  const c=o.v*o.s, x=c*(1-Math.abs(((o.h/60)%2)-1)), m=o.v-c;
+  let r=0,g=0,b=0;
+  const h=((o.h%360)+360)%360;
+  if(h<60){r=c;g=x;} else if(h<120){r=x;g=c;} else if(h<180){g=c;b=x;}
+  else if(h<240){g=x;b=c;} else if(h<300){r=x;b=c;} else {r=c;b=x;}
+  return hex((r+m)*255,(g+m)*255,(b+m)*255);
+}
 /* pick the most colourful entry of a palette */
 function accentOf(pal){
   let best=pal[0],bs=-1;
@@ -1694,6 +1814,7 @@ const CHAT_DEF={
   meBg:'#FEE500', meText:'#191919', youBg:'#FFFFFF', youText:'#191919',
   nameCol:'#38414A', timeCol:'#5B6874', dateBg:'#8497A8', dateText:'#FFFFFF',
   misBg:'#E0453A', misText:'#FFFFFF',
+  bg2auto:true,
   radius:16, fontSize:15, nameSize:12.5, timeSize:10.5, barSize:16.5,
   tail:true, avatar:true, avatarR:14, avatarSize:38,
   showInput:true, inputBg:'#FFFFFF', showHome:true, statusDark:true,
@@ -1704,6 +1825,7 @@ const MEMO_DEF={
   barBg:'#FFFFFF', barText:'#1C1C1E', barLine:true,
   cardBg:'#F7F7FA', titleCol:'#111114', bodyCol:'#3C3C43', subCol:'#8A8A8E',
   accent:'#F0B429', tagBg:'#FDF2D8', tagText:'#8A6100',
+  bg2auto:true,
   radius:14, fontSize:15, titleSize:22, listTitleSize:15.5, subSize:12.5, bigSize:31, barSize:16.5,
   paper:'none', statusDark:true, showSearch:true, showHome:true
 };
@@ -1730,6 +1852,20 @@ function fitFill(c,minTxt){
   return x;
 }
 
+/* The gradient's second stop is derived, never hand-picked: take the wallpaper,
+   breathe a little of the theme's accent into it, step the lightness away from the
+   middle, then pull it back until the two ends read as one surface rather than two
+   colours. Subtle by construction. */
+function autoGrad(base,accent,dark){
+  const tinted = accent ? mix(base,accent,0.16) : base;
+  const H = hsl(tinted);
+  const end0 = fromHsl(H[0], clamp(H[1]*1.06,0,1), clamp(H[2]+(dark?0.075:-0.10),0.03,0.97));
+  let end=end0, i=0;
+  while(contrast(end,base)>1.9 && i++<14) end=mix(end,base,0.15);
+  if(contrast(end,base)<1.035) end=mix(end, dark?'#FFFFFF':'#000000', 0.06);
+  return end;
+}
+
 function themeFromPalette(id,name,pal,opt){
   opt=opt||{};
   const s=pal.slice().sort((a,b)=>lum(a)-lum(b));
@@ -1744,7 +1880,7 @@ function themeFromPalette(id,name,pal,opt){
   const bar  = dark ? mix(s[0],s[1],0.62) : mix(s[3],'#FFFFFF',0.52);
   const ink  = dark ? '#F2F4F7' : '#16181C';
   const chat={
-    bgType:'solid', bg1:bg, bg2:dark?mix(s[0],'#000000',0.35):mix(s[3],s[2],0.35), bgAngle:160, bgImg:'', bgDim:0,
+    bgType:'solid', bg1:bg, bg2:autoGrad(bg,me,dark), bg2auto:true, bgAngle:160, bgImg:'', bgDim:0,
     barBg:fitFill(bar,6.2), barText:ensure(dark?ink:s[0],fitFill(bar,6.2),6), barLine:!dark,
     meBg:me,  meText:ensure(readable(me),me,4.6),
     youBg:you, youText:ensure(readable(you),you,7),
@@ -1782,7 +1918,7 @@ function themeFromPalette(id,name,pal,opt){
   }
   const mtitle=ensure(dark?'#F4F6F8':s[0],card,9);
   const memo={
-    bgType:'solid', bg1:mbg, bg2:dark?mix(s[0],'#000000',0.5):mix(s[3],'#FFFFFF',0.3), bgAngle:160, bgImg:'', bgDim:0,
+    bgType:'solid', bg1:mbg, bg2:autoGrad(mbg,acc,dark), bg2auto:true, bgAngle:160, bgImg:'', bgDim:0,
     barBg:fitFill(mbg,7.2), barText:ensure(mtitle,fitFill(mbg,7.2),7), barLine:true,
     cardBg:card, titleCol:ensure(mtitle,card,6.4), bodyCol:ensure(mix(mtitle,card,0.22),card,4.8),
     subCol:ensure(mix(mtitle,card,0.46),card,3.3),
@@ -1911,7 +2047,7 @@ function mixerTheme(m){
   const dchip= fitFill(dark ? mix(bg,W,0.15) : mix(bg,K,0.28), 4.6);
   const misB = fitFill(C,5.2);
   const chat={
-    bgType:'solid', bg1:bg, bg2:tint?mix(B,W,clamp(pm-0.2,0,0.9)):mix(B,K,0.25),
+    bgType:'solid', bg1:bg, bg2:autoGrad(bg,me,dark), bg2auto:true,
     bgAngle:160, bgImg:'', bgDim:0,
     barBg:bar, barText:ensure(readable(bar),bar,6), barLine:!dark,
     meBg:me,  meText:ensure(readable(me),me,4.6),
@@ -1951,7 +2087,7 @@ function mixerTheme(m){
   const macc=ensure(bestAccent(card, null, act), card, 2.6);
   const tagBg=fitFill(mix(card,macc,dark?0.3:0.26),5.2);
   const memo={
-    bgType:'solid', bg1:mbg, bg2:mix(mbg,dark?'#000000':'#FFFFFF',0.3), bgAngle:160, bgImg:'', bgDim:0,
+    bgType:'solid', bg1:mbg, bg2:autoGrad(mbg,macc,dark), bg2auto:true, bgAngle:160, bgImg:'', bgDim:0,
     barBg:fitFill(mbg,7.2), barText:ensure(mtitle,fitFill(mbg,7.2),7), barLine:true,
     cardBg:card, titleCol:mtitle, bodyCol:ensure(mix(mtitle,card,0.22),card,4.8),
     subCol:ensure(mix(mtitle,card,0.46),card,3.3),
@@ -2035,6 +2171,23 @@ const SHOT_PAL=[
  ['bloom','블룸',        ['#FF2E63','#FF7BA9','#FFD5E5','#FFF6FA']],
  ['aqua','아쿠아 팝',    ['#0057B8','#00A8E8','#7DE2FC','#EAFBFF']]
 ];
+
+/* Two-hue families: a dark + light of one hue, an accent about 150-170° away
+   (a softened complement rather than a head-on 180° clash), and a near-white tint. */
+const DUO_PAL=[
+ ['mintcoral','민트 & 코랄',   ['#1F7A72','#66C2B8','#FF9E86','#FFF1EC']],
+ ['plumolive','자두 & 올리브', ['#5E3358','#96608E','#B9C288','#F7F4E8']],
+ ['navysand','네이비 & 모래',  ['#1E3A5F','#456C9E','#E9C893','#FCF4E7']],
+ ['forestrose','숲 & 장미',    ['#2C5A4E','#5C9280','#E3A2A9','#FBF0EF']],
+ ['indigoapricot','인디고 & 살구',['#383879','#6F6FBE','#F4B487','#FDF2E8']],
+ ['tealclay','틸 & 점토',      ['#1C6B68','#4EA09C','#D88C68','#FBEFE6']],
+ ['berrysage','베리 & 세이지', ['#742B48','#B25B79','#A7BE9E','#F5F2EA']],
+ ['slateamber','슬레이트 & 앰버',['#333C4A','#626E85','#E3A94F','#FAF2E4']],
+ ['lilaclemon','라일락 & 레몬',['#6A5AA8','#9C8FD4','#E8D264','#FAF6E2']],
+ ['rustsky','녹빛 & 하늘',     ['#8A4230','#C2714F','#7FB2D8','#F6F0E9']],
+ ['mossblush','이끼 & 블러시', ['#4A5D3A','#7E9663','#E7AEA6','#F7F3EC']],
+ ['charcoalmint','차콜 & 민트',['#25292E','#4A525C','#7ED9C3','#F1F5F3']]
+];
 /* hue, saturation, lightness tuned per colour — a yellow at mid lightness turns olive */
 const MONO=[['red','빨강',4,0.82,0.55],['orange','주황',27,0.94,0.55],['yellow','노랑',48,0.97,0.56],
             ['green','초록',142,0.66,0.43],['blue','파랑',211,0.86,0.50],
@@ -2051,9 +2204,14 @@ function buildThemes(){
   });
   MONO.forEach(function(m){ const t=monoTheme('mono-'+m[0],m[1],m[2],m[3],m[4]); t.grp='단색'; out.push(t); });
   SHOT_PAL.forEach(function(p){ const t=themeFromPalette('sh-'+p[0],p[1],p[2],{}); t.grp='팔레트'; out.push(t); });
+  DUO_PAL.forEach(function(p){ const t=themeFromPalette('duo-'+p[0],p[1],p[2],{}); t.grp='2색'; out.push(t); });
   out.forEach(function(t){
     t.chat=Object.assign({},CHAT_DEF,t.chat);
     t.memo=Object.assign({},MEMO_DEF,t.memo);
+    /* every theme ships with a gradient that is already correct for it */
+    const cd=lum(t.chat.bg1)<0.42, md=lum(t.memo.bg1)<0.42;
+    t.chat.bg2=autoGrad(t.chat.bg1,t.chat.meBg,cd); t.chat.bg2auto=true;
+    t.memo.bg2=autoGrad(t.memo.bg1,t.memo.accent,md); t.memo.bg2auto=true;
   });
   return out;
 }
@@ -2077,7 +2235,7 @@ const LSK='rrmaker.v3';
 const PV_W=390;
 
 const S={
-  v:3, mode:'chat', ui:'auto',
+  v:3, mode:'chat', ui:'light',
   raw:{chat:'',memo:''},
   chat:{ units:[], rooms:[], room:0, roomMode:'one', me:'', roomName:'', dateLine:'' },
   memo:{ notes:[], style:'list', group:'month', sort:'raw', appTitle:'', sel:[], open:-1, pick:false, exportWhat:'home' },
@@ -2126,7 +2284,7 @@ function load(){
   if(!d||d.v!==3) return false;
   try{
     S.mode=d.mode==='memo'?'memo':'chat';
-    S.ui=d.ui||'auto';
+    S.ui=d.ui||'light';
     S.raw=Object.assign({chat:'',memo:''},d.raw);
     S.chat=Object.assign(S.chat,d.chat||{});
     S.memo=Object.assign(S.memo,d.memo||{});
@@ -2827,6 +2985,176 @@ function switchRow(title,desc,get,set){
   r._sync=paint;
   return r;
 }
+/* ============================================================
+   INLINE COLOUR PICKER  (HSV plane + hue strip + hex + swatches)
+   Same interaction model as the reference picker, restyled for this app and
+   extended with the thing this tool actually cares about: a live contrast
+   readout against whatever the colour will sit on.
+   ============================================================ */
+const CP_QUICK=['#FFFFFF','#F2F3F5','#9AA1AB','#3E444C','#111111',
+                '#FF4D4F','#FF7A45','#FFC53D','#73D13D','#36CFC9',
+                '#3B82F6','#6E56CF','#C13DBE','#F2668B','#8C6239','#0E7490'];
+const CP_OPEN=[];
+function cpCloseAll(except){
+  CP_OPEN.forEach(function(n){ if(n!==except) n.classList.remove('open'); });
+}
+on(document,'pointerdown',function(e){
+  if(!e.target.closest || !e.target.closest('.cp')) cpCloseAll(null);
+});
+
+/* label, get()->hex, set(hex), against()->hex|null (the surface it sits on) */
+function colorControl(label,get,set,against,minRatio){
+  minRatio=minRatio||4.5;
+  const root=el('div','cp');
+  CP_OPEN.push(root);
+
+  const trig=el('button','cp-trig');
+  const sw=el('span','cp-sw');
+  const nm=el('span','cp-name',label);
+  const val=el('span','cp-val');
+  const warn=el('span','cp-warn'); warn.innerHTML=ico('warn',14);
+  const chev=el('span','cp-chev'); chev.innerHTML=ico('chev',13);
+  [sw,nm,val,warn,chev].forEach(function(n){ trig.appendChild(n); });
+  root.appendChild(trig);
+
+  const pop=el('div','cp-pop');
+  const plane=el('div','cp-plane'); const pcur=el('span','cp-pcur'); plane.appendChild(pcur);
+  const hue=el('div','cp-hue'); const hcur=el('span','cp-hcur'); hue.appendChild(hcur);
+  const row=el('div','cp-row');
+  const hexI=document.createElement('input');
+  hexI.className='cp-hex'; hexI.maxLength=7; hexI.spellcheck=false; hexI.setAttribute('aria-label',label+' HEX');
+  const copy=el('button','cp-copy','복사');
+  row.appendChild(hexI); row.appendChild(copy);
+  const meta=el('div','cp-meta');
+  const rRgb=el('div','cp-read'); rRgb.innerHTML='<small>RGB</small><b></b>';
+  const rHsl=el('div','cp-read'); rHsl.innerHTML='<small>HSL</small><b></b>';
+  const rCon=el('div','cp-read'); rCon.innerHTML='<small>대비</small><b></b>';
+  meta.appendChild(rRgb); meta.appendChild(rHsl);
+  if(against) meta.appendChild(rCon);
+  const quick=el('div','cp-quick');
+  [plane,hue,row,meta,quick].forEach(function(n){ pop.appendChild(n); });
+  root.appendChild(pop);
+
+  /* keep the hue the user was on even when saturation drops to zero */
+  let hsv={h:270,s:0.8,v:0.8};
+
+  function paint(){
+    const v=hx(get())||'#000000';
+    const nx=rgbToHsv(v);
+    if(nx.s>0.001) hsv.h=nx.h;
+    hsv.s=nx.s; hsv.v=nx.v;
+
+    sw.style.background=v;
+    val.textContent=v;
+    if(document.activeElement!==hexI) hexI.value=v;
+    plane.style.background='linear-gradient(to top,#000,transparent),'+
+                           'linear-gradient(to right,#fff,hsl('+Math.round(hsv.h)+',100%,50%))';
+    pcur.style.left=(hsv.s*100)+'%';
+    pcur.style.top=((1-hsv.v)*100)+'%';
+    pcur.style.background=v;
+    hcur.style.left=((hsv.h/360)*100)+'%';
+
+    const p=rgb(v), hl=hsl(v);
+    $('b',rRgb).textContent=p[0]+', '+p[1]+', '+p[2];
+    $('b',rHsl).textContent=Math.round(hl[0])+'°, '+Math.round(hl[1]*100)+'%, '+Math.round(hl[2]*100)+'%';
+    if(against){
+      const bgc=against();
+      const c=bgc?contrast(v,bgc):0;
+      const ok=c>=minRatio;
+      $('b',rCon).textContent=bgc?(c.toFixed(1)+':1'):'—';
+      rCon.className='cp-read '+(bgc?(ok?'ok':'bad'):'');
+      root.classList.toggle('low', !!bgc && !ok);
+      warn.title='대비 '+c.toFixed(1)+':1 — 읽기 어려울 수 있습니다';
+    }
+    paintQuick();
+  }
+
+  function paintQuick(){
+    const cur=(hx(get())||'').toUpperCase();
+    const roles=[];
+    if(S.mixer){
+      const m=S.mixer;
+      [[m.c1,'테마색'],[m.on2!==false?m.c2:null,'보조 1'],[m.on3!==false?m.c3:null,'보조 2']]
+        .forEach(function(r){ const c=hx(r[0]); if(c && !roles.some(function(x){return x.c===c;})) roles.push({c:c,l:r[1]}); });
+    }
+    const list=roles.concat(
+      CP_QUICK.map(function(c){return {c:hx(c),l:''};})
+              .filter(function(o){ return !roles.some(function(r){return r.c===o.c;}); })
+    ).slice(0,24);
+    quick.innerHTML='';
+    list.forEach(function(o){
+      const b=el('button','cp-q'+(o.l?' role':''));
+      b.style.setProperty('--qc',o.c);
+      b.title=o.l?(o.l+' · '+o.c):o.c;
+      b.setAttribute('aria-label',b.title);
+      if(o.c===cur) b.style.outline='2px solid var(--ink)';
+      on(b,'click',function(){ commit(o.c); });
+      quick.appendChild(b);
+    });
+  }
+
+  function commit(v,live){
+    const c=hx(v); if(!c) return;
+    set(c,live); paint();
+  }
+  function fromPlane(e){
+    const r=plane.getBoundingClientRect();
+    hsv.s=clamp((e.clientX-r.left)/Math.max(1,r.width),0,1);
+    hsv.v=1-clamp((e.clientY-r.top)/Math.max(1,r.height),0,1);
+    commit(hsvToHex(hsv),true);
+  }
+  function fromHue(e){
+    const r=hue.getBoundingClientRect();
+    hsv.h=clamp((e.clientX-r.left)/Math.max(1,r.width),0,1)*360;
+    commit(hsvToHex(hsv),true);
+  }
+  /* pointer capture so dragging off the surface keeps tracking */
+  function surface(node,fn){
+    on(node,'pointerdown',function(e){
+      e.preventDefault(); node.setPointerCapture&&node.setPointerCapture(e.pointerId); fn(e);
+    });
+    on(node,'pointermove',function(e){
+      if(node.hasPointerCapture&&node.hasPointerCapture(e.pointerId)) fn(e);
+    });
+    on(node,'pointerup',function(e){
+      try{ node.releasePointerCapture&&node.releasePointerCapture(e.pointerId); }catch(_){}
+      commit(hsvToHex(hsv),false);
+    });
+  }
+  surface(plane,fromPlane);
+  surface(hue,fromHue);
+
+  on(trig,'click',function(e){
+    e.preventDefault();
+    const opening=!root.classList.contains('open');
+    cpCloseAll(root);
+    root.classList.toggle('open',opening);
+    trig.setAttribute('aria-expanded',String(opening));
+    if(opening) paint();
+  });
+  on(hexI,'change',function(){
+    const v=hx(hexI.value);
+    if(v) commit(v,false); else { paint(); toast('#RRGGBB 형식으로 입력해 주세요','warn'); }
+  });
+  on(hexI,'keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); hexI.blur(); } });
+  on(hexI,'blur',paint);
+  on(copy,'click',async function(){
+    const v=hx(get())||'';
+    try{ await navigator.clipboard.writeText(v); }
+    catch(e){
+      const t=document.createElement('textarea'); t.value=v;
+      t.style.cssText='position:fixed;opacity:0'; document.body.appendChild(t);
+      t.select(); try{ document.execCommand('copy'); }catch(_){}
+      t.remove();
+    }
+    toast(v+' 복사됨');
+  });
+
+  paint();
+  root._sync=paint;
+  return root;
+}
+
 function colorRow(label,get,set,warnAgainst){
   const r=el('div','col-row');
   const sw=el('label','col-sw');
@@ -3151,6 +3479,38 @@ function exportBase(){
   return v||autoName();
 }
 
+/* Browsers refuse repeated programmatic downloads, and in-app browsers (KakaoTalk,
+   Instagram) refuse them outright. Keep the blobs around and offer real links the
+   user can click — a click is a fresh gesture, and on phones it also allows
+   long-press → save image. */
+let DL_URLS=[];
+function paintExportOut(files){
+  const box=$('#exportOut'); if(!box) return;
+  DL_URLS.forEach(function(u){ try{ URL.revokeObjectURL(u); }catch(e){} });
+  DL_URLS=[];
+  box.innerHTML='';
+  if(!files || !files.length) return;
+
+  const h=el('div','sec-t','만들어진 이미지'); h.style.margin='0 0 2px';
+  box.appendChild(h);
+  const note=el('p','hint');
+  note.innerHTML='자동 저장이 막혔다면 아래를 눌러 직접 받으세요. 휴대폰에서는 <b>길게 눌러 이미지 저장</b>도 됩니다.';
+  box.appendChild(note);
+
+  const list=el('div','dl-list');
+  files.forEach(function(f){
+    const u=URL.createObjectURL(f.blob); DL_URLS.push(u);
+    const a=document.createElement('a');
+    a.className='dl-item'; a.href=u; a.download=f.name; a.target='_blank'; a.rel='noopener';
+    const im=document.createElement('img'); im.src=u; im.alt=''; a.appendChild(im);
+    a.appendChild(el('span','dl-n',f.name));
+    a.appendChild(el('span','dl-s',Math.round(f.blob.size/1024)+'KB'));
+    a.insertAdjacentHTML('beforeend', ico('download',16));
+    list.appendChild(a);
+  });
+  box.appendChild(list);
+}
+
 async function exportPNG(){
   const pages=$$('.page',$('#deck'));
   if(!pages.length){ toast('내보낼 내용이 없습니다','warn'); return; }
@@ -3161,6 +3521,7 @@ async function exportPNG(){
   const live=$$('.page',$('#deck'));
   busy(true,'이미지를 만드는 중…');
   let okN=0;
+  const made=[];
   try{
     for(let i=0;i<live.length;i++){
       busy(true,'이미지를 만드는 중… ('+(i+1)+'/'+live.length+')');
@@ -3173,13 +3534,17 @@ async function exportPNG(){
       const nm = live.length>1
         ? base+'_'+(i+1)+'of'+live.length+(label?'_'+safeName(label):'')+'.png'
         : base+'.png';
+      made.push({name:nm, blob:blob});
       downloadBlob(blob,nm);
       okN++;
-      await new Promise(r=>setTimeout(r,260));
+      await new Promise(r=>setTimeout(r,380));
     }
-    toast(okN+'장을 저장했습니다');
+    paintExportOut(made);
+    toast(okN>1 ? (okN+'장을 만들었습니다 — 저장이 안 됐으면 아래 목록에서 받으세요')
+                : '이미지를 저장했습니다');
   }catch(e){
     console.error(e);
+    if(made.length) paintExportOut(made);
     toast('이미지 변환에 실패했습니다. 브라우저를 최신 버전으로 업데이트해 주세요.','warn');
   }finally{
     busy(false);
@@ -3894,7 +4259,7 @@ function paintThemeGrid(){
   const f=$('#thFilter');
   if(f){
     f.innerHTML='';
-    const groups=[['기본','기본'],['단색','단색'],['팔레트','팔레트'],['내 테마','내 테마'],['all','전체']];
+    const groups=[['기본','기본'],['2색','2색'],['단색','단색'],['팔레트','팔레트'],['내 테마','내 테마'],['all','전체']];
     groups.forEach(function(g){
       if(g[0]==='내 테마' && !S.custom.length) return;
       const c=el('button','chip'+(S.thFilter===g[0]?' is-on':''),g[1]);
@@ -3960,32 +4325,40 @@ const applyMixerSoon=debounce(function(){
 
 function mixColorRow(label,key,onKey){
   const m=mixState();
-  const r=el('div','col-row');
-  const sw=el('label','col-sw'); const fi=el('i'); sw.appendChild(fi);
-  const inp=document.createElement('input'); inp.type='color'; sw.appendChild(inp);
-  r.appendChild(sw);
-  r.appendChild(el('div','col-lab',label));
-  const hexI=document.createElement('input'); hexI.className='col-hex'; hexI.spellcheck=false; r.appendChild(hexI);
-  let tog=null;
-  if(onKey){ tog=el('button','chip'); r.appendChild(tog); }
-  const paint=function(){
-    const v=hx(m[key])||'#000000';
-    fi.style.background=v; inp.value=v;
-    if(document.activeElement!==hexI) hexI.value=v;
-    if(tog){
+  const wrap=el('div');
+  const cc=colorControl(label, ()=>m[key], function(v,live){
+    m[key]=v;
+    if(live){ applyMixerSoon(); }
+    else { applyMixer(); paintMixStrip(); }
+  }, null);
+  wrap.appendChild(cc);
+  if(onKey){
+    const bar=el('div'); bar.style.cssText='display:flex;justify-content:flex-end;margin:-4px 0 8px';
+    const tog=el('button','chip mix-tog');
+    const paint=function(){
       const ov=m[onKey]!==false;
-      tog.textContent=ov?'사용':'끔';
+      tog.textContent=ov?'이 색 사용':'꺼짐';
       tog.classList.toggle('is-on',ov);
-      sw.style.opacity=ov?'':'.4';
-    }
-  };
-  on(inp,'input',function(){ m[key]=hx(inp.value); paint(); applyMixerSoon(); });
-  on(inp,'change',function(){ m[key]=hx(inp.value); paint(); applyMixer(); paintMixer(); });
-  on(hexI,'change',function(){ const v=hx(hexI.value); if(v){ m[key]=v; applyMixer(); paintMixer(); } else paint(); });
-  on(hexI,'blur',paint);
-  if(tog) on(tog,'click',function(){ m[onKey]=(m[onKey]===false); applyMixer(); paintMixer(); });
-  paint();
-  return r;
+      cc.style.opacity=ov?'':'.45';
+    };
+    on(tog,'click',function(){ m[onKey]=(m[onKey]===false); paint(); applyMixer(); paintMixStrip(); });
+    paint(); bar.appendChild(tog); wrap.appendChild(bar);
+  }
+  return wrap;
+}
+
+/* refresh just the role strip — rebuilding all of #mixUI would shut an open picker */
+function paintMixStrip(){
+  const strip=$('#mixStrip'); if(!strip) return;
+  const act=mixColors(mixState());
+  const roles=['말풍선','배경','강조'];
+  strip.innerHTML='';
+  act.slice(0,3).forEach(function(c,i){
+    const w=el('div','mix-role');
+    const s2=el('div','mix-sw'); s2.style.background=c; w.appendChild(s2);
+    w.appendChild(el('div','mix-lab',roles[i]));
+    strip.appendChild(w);
+  });
 }
 
 function paintMixer(){
@@ -4018,14 +4391,9 @@ function paintMixer(){
   /* what each colour is currently doing */
   const act=mixColors(m);
   const roles=['말풍선','배경','강조'];
-  const strip=el('div','mix-strip');
-  act.slice(0,3).forEach(function(c,i){
-    const w=el('div','mix-role');
-    const s2=el('div','mix-sw'); s2.style.background=c; w.appendChild(s2);
-    w.appendChild(el('div','mix-lab',roles[i]));
-    strip.appendChild(w);
-  });
+  const strip=el('div','mix-strip'); strip.id='mixStrip';
   box.appendChild(strip);
+  paintMixStrip();
 
   const sh=el('button','btn lg ink-btn block');
   sh.innerHTML=ico('dice',17)+'색 배치 섞기';
@@ -4140,7 +4508,13 @@ function textField(label,get,set,ph){
 }
 function colField(label,key,againstKey){
   const t=()=>T();
-  return colorRow(label,()=>t()[key],function(v){ t()[key]=v; renderSoon(); paintThemeGrid(); save(); },
+  return colorControl(label, ()=>t()[key],
+    function(v,live){
+      t()[key]=v;
+      if(live){ renderSoon(); }
+      else { renderAll(); paintThemeGrid(); syncEditor($('#thEditor')); }
+      save();
+    },
     againstKey?()=>t()[againstKey]:null);
 }
 function swField(title,desc,key){
@@ -4161,6 +4535,11 @@ function choiceRow(label,opts,get,set){
   return f;
 }
 
+/* the accent to breathe into the gradient differs per tab */
+function autoGradFor(t){
+  const accent = S.mode==='chat' ? t.meBg : t.accent;
+  return autoGrad(t.bg1, accent, lum(t.bg1)<0.42);
+}
 function paintThemeEditor(force){
   const box=$('#thEditor'); if(!box) return;
   const key=S.mode+'|'+S.themeId+'|'+participants().join(',');
@@ -4179,10 +4558,37 @@ function paintThemeEditor(force){
 
   const bgFold=fold('배경', t().bg1, true);
   bgFold._body.appendChild(choiceRow('방식',[['solid','단색'],['grad','그라데이션'],['img','이미지']],
-    ()=>t().bgType,function(v){ t().bgType=v; paintThemeEditor(true); }));
-  bgFold._body.appendChild(colField(t().bgType==='grad'?'시작 색':'배경색','bg1'));
+    ()=>t().bgType,function(v){
+      t().bgType=v;
+      /* arriving at gradient with a stale end colour looks broken — derive it now */
+      if(v==='grad' && t().bg2auto!==false) t().bg2=autoGradFor(t());
+      paintThemeEditor(true);
+    }));
+  bgFold._body.appendChild(colorControl(t().bgType==='grad'?'시작 색':'배경색',
+    ()=>t().bg1,
+    function(v,live){
+      t().bg1=v;
+      if(t().bg2auto!==false) t().bg2=autoGradFor(t());
+      if(live) renderSoon(); else { renderAll(); paintThemeGrid(); paintThemeEditor(true); }
+      save();
+    }, null));
   if(t().bgType==='grad'){
-    bgFold._body.appendChild(colField('끝 색','bg2'));
+    bgFold._body.appendChild(colorControl('끝 색',
+      ()=>t().bg2,
+      function(v,live){
+        t().bg2=v; t().bg2auto=false;       /* touched by hand — stop following */
+        if(live) renderSoon(); else { renderAll(); paintThemeGrid(); paintThemeEditor(true); }
+        save();
+      }, null));
+    const ar=el('div','btn-row'); ar.style.margin='-2px 0 12px';
+    const ab=el('button','btn sm'+(t().bg2auto!==false?' ink-btn':''));
+    ab.innerHTML=ico('wand',14)+(t().bg2auto!==false?'자동 계산 중':'끝 색 자동 계산');
+    on(ab,'click',function(){
+      t().bg2auto=true; t().bg2=autoGradFor(t());
+      renderAll(); paintThemeGrid(); paintThemeEditor(true); save();
+      toast('배경색에 맞춰 끝 색을 다시 계산했습니다');
+    });
+    ar.appendChild(ab); bgFold._body.appendChild(ar);
     bgFold._body.appendChild(sldField('각도',()=>t().bgAngle,v=>{t().bgAngle=v;},0,360,5,'°'));
   }
   if(t().bgType==='img'){
@@ -4419,16 +4825,7 @@ function wire(){
       S.raw[S.mode]=''; raw.value=''; reparse(false); toast('비웠습니다');
     },true);
   });
-  on($('#btnSample'),'click',function(){
-    S.raw[S.mode]= S.mode==='chat'?SAMPLE_CHAT:SAMPLE_MEMO;
-    raw.value=curRaw(); reparse(false);
-    if(S.mode==='chat' && participants().indexOf('삼몽')>=0){
-      S.chat.me='삼몽';
-      paintMeSelect(); paintRoomChips(); paintEditList(); renderAll();
-    }
-    syncInputs();
-    toast('예시를 불러왔습니다');
-  });
+  on($('#btnSample'),'click',function(){ loadSample(S.mode,true); toast('예시를 다시 넣었습니다'); });
   on($('#btnPaste'),'click',async function(){
     try{
       const t=await navigator.clipboard.readText();
@@ -4671,6 +5068,21 @@ function grip(node,axis){
   });
 }
 
+/* the app opens on the sample so there is something to look at straight away */
+function loadSample(mode,render){
+  const m=mode||S.mode;
+  S.raw[m] = (m==='chat') ? SAMPLE_CHAT : SAMPLE_MEMO;
+  if(m!==S.mode) return;
+  const raw=$('#raw'); if(raw) raw.value=curRaw();
+  reparse(false);
+  if(m==='chat' && participants().indexOf('삼몽')>=0){
+    S.chat.me='삼몽';
+    paintMeSelect(); paintRoomChips(); paintEditList();
+  }
+  syncInputs();
+  if(render!==false) renderAll();
+}
+
 function paintFileHint(){
   const h=$('#fileHint'); if(!h) return;
   h.textContent='예: '+exportBase()+'.png';
@@ -4723,9 +5135,10 @@ function applyUiTheme(){
    ============================================================ */
 function boot(reload){
   try{ const f=$('#favicon'), b=$('#brandLogo'); if(f&&b) f.href=b.src; }catch(e){}
+  let fresh=false;
   if(!reload){
     const had=load();
-    if(!had) applyTheme(THEMES[0]);
+    if(!had){ applyTheme(THEMES[0]); fresh=true; }
   }
   applyUiTheme();                       /* after load(), so a saved light/dark choice sticks */
   applyPanes();
@@ -4742,6 +5155,7 @@ function boot(reload){
   syncInputs();
   setTab('input');
   moveSegInd();
+  if(fresh){ loadSample('memo',false); loadSample('chat',false); }
   renderAll();
 }
 

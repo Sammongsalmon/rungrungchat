@@ -6,7 +6,7 @@ const LSK='rrmaker.v3';
 const PV_W=390;
 
 const S={
-  v:3, mode:'chat', ui:'auto',
+  v:3, mode:'chat', ui:'light',
   raw:{chat:'',memo:''},
   chat:{ units:[], rooms:[], room:0, roomMode:'one', me:'', roomName:'', dateLine:'' },
   memo:{ notes:[], style:'list', group:'month', sort:'raw', appTitle:'', sel:[], open:-1, pick:false, exportWhat:'home' },
@@ -55,7 +55,7 @@ function load(){
   if(!d||d.v!==3) return false;
   try{
     S.mode=d.mode==='memo'?'memo':'chat';
-    S.ui=d.ui||'auto';
+    S.ui=d.ui||'light';
     S.raw=Object.assign({chat:'',memo:''},d.raw);
     S.chat=Object.assign(S.chat,d.chat||{});
     S.memo=Object.assign(S.memo,d.memo||{});

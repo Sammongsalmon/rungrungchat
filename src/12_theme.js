@@ -8,6 +8,7 @@ const CHAT_DEF={
   meBg:'#FEE500', meText:'#191919', youBg:'#FFFFFF', youText:'#191919',
   nameCol:'#38414A', timeCol:'#5B6874', dateBg:'#8497A8', dateText:'#FFFFFF',
   misBg:'#E0453A', misText:'#FFFFFF',
+  bg2auto:true,
   radius:16, fontSize:15, nameSize:12.5, timeSize:10.5, barSize:16.5,
   tail:true, avatar:true, avatarR:14, avatarSize:38,
   showInput:true, inputBg:'#FFFFFF', showHome:true, statusDark:true,
@@ -18,6 +19,7 @@ const MEMO_DEF={
   barBg:'#FFFFFF', barText:'#1C1C1E', barLine:true,
   cardBg:'#F7F7FA', titleCol:'#111114', bodyCol:'#3C3C43', subCol:'#8A8A8E',
   accent:'#F0B429', tagBg:'#FDF2D8', tagText:'#8A6100',
+  bg2auto:true,
   radius:14, fontSize:15, titleSize:22, listTitleSize:15.5, subSize:12.5, bigSize:31, barSize:16.5,
   paper:'none', statusDark:true, showSearch:true, showHome:true
 };
@@ -44,6 +46,20 @@ function fitFill(c,minTxt){
   return x;
 }
 
+/* The gradient's second stop is derived, never hand-picked: take the wallpaper,
+   breathe a little of the theme's accent into it, step the lightness away from the
+   middle, then pull it back until the two ends read as one surface rather than two
+   colours. Subtle by construction. */
+function autoGrad(base,accent,dark){
+  const tinted = accent ? mix(base,accent,0.16) : base;
+  const H = hsl(tinted);
+  const end0 = fromHsl(H[0], clamp(H[1]*1.06,0,1), clamp(H[2]+(dark?0.075:-0.10),0.03,0.97));
+  let end=end0, i=0;
+  while(contrast(end,base)>1.9 && i++<14) end=mix(end,base,0.15);
+  if(contrast(end,base)<1.035) end=mix(end, dark?'#FFFFFF':'#000000', 0.06);
+  return end;
+}
+
 function themeFromPalette(id,name,pal,opt){
   opt=opt||{};
   const s=pal.slice().sort((a,b)=>lum(a)-lum(b));
@@ -58,7 +74,7 @@ function themeFromPalette(id,name,pal,opt){
   const bar  = dark ? mix(s[0],s[1],0.62) : mix(s[3],'#FFFFFF',0.52);
   const ink  = dark ? '#F2F4F7' : '#16181C';
   const chat={
-    bgType:'solid', bg1:bg, bg2:dark?mix(s[0],'#000000',0.35):mix(s[3],s[2],0.35), bgAngle:160, bgImg:'', bgDim:0,
+    bgType:'solid', bg1:bg, bg2:autoGrad(bg,me,dark), bg2auto:true, bgAngle:160, bgImg:'', bgDim:0,
     barBg:fitFill(bar,6.2), barText:ensure(dark?ink:s[0],fitFill(bar,6.2),6), barLine:!dark,
     meBg:me,  meText:ensure(readable(me),me,4.6),
     youBg:you, youText:ensure(readable(you),you,7),
@@ -96,7 +112,7 @@ function themeFromPalette(id,name,pal,opt){
   }
   const mtitle=ensure(dark?'#F4F6F8':s[0],card,9);
   const memo={
-    bgType:'solid', bg1:mbg, bg2:dark?mix(s[0],'#000000',0.5):mix(s[3],'#FFFFFF',0.3), bgAngle:160, bgImg:'', bgDim:0,
+    bgType:'solid', bg1:mbg, bg2:autoGrad(mbg,acc,dark), bg2auto:true, bgAngle:160, bgImg:'', bgDim:0,
     barBg:fitFill(mbg,7.2), barText:ensure(mtitle,fitFill(mbg,7.2),7), barLine:true,
     cardBg:card, titleCol:ensure(mtitle,card,6.4), bodyCol:ensure(mix(mtitle,card,0.22),card,4.8),
     subCol:ensure(mix(mtitle,card,0.46),card,3.3),
@@ -225,7 +241,7 @@ function mixerTheme(m){
   const dchip= fitFill(dark ? mix(bg,W,0.15) : mix(bg,K,0.28), 4.6);
   const misB = fitFill(C,5.2);
   const chat={
-    bgType:'solid', bg1:bg, bg2:tint?mix(B,W,clamp(pm-0.2,0,0.9)):mix(B,K,0.25),
+    bgType:'solid', bg1:bg, bg2:autoGrad(bg,me,dark), bg2auto:true,
     bgAngle:160, bgImg:'', bgDim:0,
     barBg:bar, barText:ensure(readable(bar),bar,6), barLine:!dark,
     meBg:me,  meText:ensure(readable(me),me,4.6),
@@ -265,7 +281,7 @@ function mixerTheme(m){
   const macc=ensure(bestAccent(card, null, act), card, 2.6);
   const tagBg=fitFill(mix(card,macc,dark?0.3:0.26),5.2);
   const memo={
-    bgType:'solid', bg1:mbg, bg2:mix(mbg,dark?'#000000':'#FFFFFF',0.3), bgAngle:160, bgImg:'', bgDim:0,
+    bgType:'solid', bg1:mbg, bg2:autoGrad(mbg,macc,dark), bg2auto:true, bgAngle:160, bgImg:'', bgDim:0,
     barBg:fitFill(mbg,7.2), barText:ensure(mtitle,fitFill(mbg,7.2),7), barLine:true,
     cardBg:card, titleCol:mtitle, bodyCol:ensure(mix(mtitle,card,0.22),card,4.8),
     subCol:ensure(mix(mtitle,card,0.46),card,3.3),
@@ -349,6 +365,23 @@ const SHOT_PAL=[
  ['bloom','블룸',        ['#FF2E63','#FF7BA9','#FFD5E5','#FFF6FA']],
  ['aqua','아쿠아 팝',    ['#0057B8','#00A8E8','#7DE2FC','#EAFBFF']]
 ];
+
+/* Two-hue families: a dark + light of one hue, an accent about 150-170° away
+   (a softened complement rather than a head-on 180° clash), and a near-white tint. */
+const DUO_PAL=[
+ ['mintcoral','민트 & 코랄',   ['#1F7A72','#66C2B8','#FF9E86','#FFF1EC']],
+ ['plumolive','자두 & 올리브', ['#5E3358','#96608E','#B9C288','#F7F4E8']],
+ ['navysand','네이비 & 모래',  ['#1E3A5F','#456C9E','#E9C893','#FCF4E7']],
+ ['forestrose','숲 & 장미',    ['#2C5A4E','#5C9280','#E3A2A9','#FBF0EF']],
+ ['indigoapricot','인디고 & 살구',['#383879','#6F6FBE','#F4B487','#FDF2E8']],
+ ['tealclay','틸 & 점토',      ['#1C6B68','#4EA09C','#D88C68','#FBEFE6']],
+ ['berrysage','베리 & 세이지', ['#742B48','#B25B79','#A7BE9E','#F5F2EA']],
+ ['slateamber','슬레이트 & 앰버',['#333C4A','#626E85','#E3A94F','#FAF2E4']],
+ ['lilaclemon','라일락 & 레몬',['#6A5AA8','#9C8FD4','#E8D264','#FAF6E2']],
+ ['rustsky','녹빛 & 하늘',     ['#8A4230','#C2714F','#7FB2D8','#F6F0E9']],
+ ['mossblush','이끼 & 블러시', ['#4A5D3A','#7E9663','#E7AEA6','#F7F3EC']],
+ ['charcoalmint','차콜 & 민트',['#25292E','#4A525C','#7ED9C3','#F1F5F3']]
+];
 /* hue, saturation, lightness tuned per colour — a yellow at mid lightness turns olive */
 const MONO=[['red','빨강',4,0.82,0.55],['orange','주황',27,0.94,0.55],['yellow','노랑',48,0.97,0.56],
             ['green','초록',142,0.66,0.43],['blue','파랑',211,0.86,0.50],
@@ -365,9 +398,14 @@ function buildThemes(){
   });
   MONO.forEach(function(m){ const t=monoTheme('mono-'+m[0],m[1],m[2],m[3],m[4]); t.grp='단색'; out.push(t); });
   SHOT_PAL.forEach(function(p){ const t=themeFromPalette('sh-'+p[0],p[1],p[2],{}); t.grp='팔레트'; out.push(t); });
+  DUO_PAL.forEach(function(p){ const t=themeFromPalette('duo-'+p[0],p[1],p[2],{}); t.grp='2색'; out.push(t); });
   out.forEach(function(t){
     t.chat=Object.assign({},CHAT_DEF,t.chat);
     t.memo=Object.assign({},MEMO_DEF,t.memo);
+    /* every theme ships with a gradient that is already correct for it */
+    const cd=lum(t.chat.bg1)<0.42, md=lum(t.memo.bg1)<0.42;
+    t.chat.bg2=autoGrad(t.chat.bg1,t.chat.meBg,cd); t.chat.bg2auto=true;
+    t.memo.bg2=autoGrad(t.memo.bg1,t.memo.accent,md); t.memo.bg2auto=true;
   });
   return out;
 }

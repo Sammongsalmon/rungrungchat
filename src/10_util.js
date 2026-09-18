@@ -98,6 +98,26 @@ function fromHsl(h,s,l){
   return hex((r+m)*255,(g+m)*255,(b+m)*255);
 }
 function rgba(c,a){const p=rgb(c);return 'rgba('+p[0]+','+p[1]+','+p[2]+','+a+')';}
+function rgbToHsv(c){
+  const p=rgb(c).map(v=>v/255), r=p[0],g=p[1],b=p[2];
+  const mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn;
+  let h=0;
+  if(d){
+    if(mx===r) h=60*(((g-b)/d)%6);
+    else if(mx===g) h=60*((b-r)/d+2);
+    else h=60*((r-g)/d+4);
+  }
+  if(h<0) h+=360;
+  return {h:h, s:mx===0?0:d/mx, v:mx};
+}
+function hsvToHex(o){
+  const c=o.v*o.s, x=c*(1-Math.abs(((o.h/60)%2)-1)), m=o.v-c;
+  let r=0,g=0,b=0;
+  const h=((o.h%360)+360)%360;
+  if(h<60){r=c;g=x;} else if(h<120){r=x;g=c;} else if(h<180){g=c;b=x;}
+  else if(h<240){g=x;b=c;} else if(h<300){r=x;b=c;} else {r=c;b=x;}
+  return hex((r+m)*255,(g+m)*255,(b+m)*255);
+}
 /* pick the most colourful entry of a palette */
 function accentOf(pal){
   let best=pal[0],bs=-1;

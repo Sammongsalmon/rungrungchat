@@ -199,6 +199,38 @@ function exportBase(){
   return v||autoName();
 }
 
+/* Browsers refuse repeated programmatic downloads, and in-app browsers (KakaoTalk,
+   Instagram) refuse them outright. Keep the blobs around and offer real links the
+   user can click — a click is a fresh gesture, and on phones it also allows
+   long-press → save image. */
+let DL_URLS=[];
+function paintExportOut(files){
+  const box=$('#exportOut'); if(!box) return;
+  DL_URLS.forEach(function(u){ try{ URL.revokeObjectURL(u); }catch(e){} });
+  DL_URLS=[];
+  box.innerHTML='';
+  if(!files || !files.length) return;
+
+  const h=el('div','sec-t','만들어진 이미지'); h.style.margin='0 0 2px';
+  box.appendChild(h);
+  const note=el('p','hint');
+  note.innerHTML='자동 저장이 막혔다면 아래를 눌러 직접 받으세요. 휴대폰에서는 <b>길게 눌러 이미지 저장</b>도 됩니다.';
+  box.appendChild(note);
+
+  const list=el('div','dl-list');
+  files.forEach(function(f){
+    const u=URL.createObjectURL(f.blob); DL_URLS.push(u);
+    const a=document.createElement('a');
+    a.className='dl-item'; a.href=u; a.download=f.name; a.target='_blank'; a.rel='noopener';
+    const im=document.createElement('img'); im.src=u; im.alt=''; a.appendChild(im);
+    a.appendChild(el('span','dl-n',f.name));
+    a.appendChild(el('span','dl-s',Math.round(f.blob.size/1024)+'KB'));
+    a.insertAdjacentHTML('beforeend', ico('download',16));
+    list.appendChild(a);
+  });
+  box.appendChild(list);
+}
+
 async function exportPNG(){
   const pages=$$('.page',$('#deck'));
   if(!pages.length){ toast('내보낼 내용이 없습니다','warn'); return; }
@@ -209,6 +241,7 @@ async function exportPNG(){
   const live=$$('.page',$('#deck'));
   busy(true,'이미지를 만드는 중…');
   let okN=0;
+  const made=[];
   try{
     for(let i=0;i<live.length;i++){
       busy(true,'이미지를 만드는 중… ('+(i+1)+'/'+live.length+')');
@@ -221,13 +254,17 @@ async function exportPNG(){
       const nm = live.length>1
         ? base+'_'+(i+1)+'of'+live.length+(label?'_'+safeName(label):'')+'.png'
         : base+'.png';
+      made.push({name:nm, blob:blob});
       downloadBlob(blob,nm);
       okN++;
-      await new Promise(r=>setTimeout(r,260));
+      await new Promise(r=>setTimeout(r,380));
     }
-    toast(okN+'장을 저장했습니다');
+    paintExportOut(made);
+    toast(okN>1 ? (okN+'장을 만들었습니다 — 저장이 안 됐으면 아래 목록에서 받으세요')
+                : '이미지를 저장했습니다');
   }catch(e){
     console.error(e);
+    if(made.length) paintExportOut(made);
     toast('이미지 변환에 실패했습니다. 브라우저를 최신 버전으로 업데이트해 주세요.','warn');
   }finally{
     busy(false);

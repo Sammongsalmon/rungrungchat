@@ -46,14 +46,14 @@
             <div class="sec-h">
               <span class="sec-t">원본 붙여넣기</span>
               <div class="sec-x">
-                <button class="btn sm ghost" id="btnSample" data-ico-pre="sparkle">예시</button>
+                <button class="btn sm ghost danger" id="btnClearRaw" data-ico-pre="trash">비우기</button>
                 <button class="btn sm ghost" id="btnPaste" data-ico-pre="clipboard">붙여넣기</button>
               </div>
             </div>
             <textarea class="ta mono" id="raw" rows="11" spellcheck="false"
               placeholder="AI가 출력한 내용을 통째로 붙여넣으세요.&#10;OOC 지시문·하단 메타정보·details 블록은 자동으로 걸러집니다."></textarea>
             <div class="btn-row" style="margin-top:8px">
-              <button class="btn sm ghost danger" id="btnClearRaw" data-ico-pre="trash">비우기</button>
+              <button class="btn sm ghost" id="btnSample" data-ico-pre="sparkle">예시 다시 넣기</button>
               <span style="flex:1"></span>
               <button class="btn sm ink-btn" id="btnParse" data-ico-pre="wand">다시 분석</button>
             </div>
@@ -237,6 +237,7 @@
               <p class="hint" id="sizeHint"></p>
             </div>
             <button class="btn lg ink-btn block" id="btnExport" data-ico-pre="download" style="margin-top:14px">PNG로 저장</button>
+            <div id="exportOut"></div>
           </div>
 
           <hr class="hr">

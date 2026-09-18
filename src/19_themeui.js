@@ -55,7 +55,7 @@ function paintThemeGrid(){
   const f=$('#thFilter');
   if(f){
     f.innerHTML='';
-    const groups=[['기본','기본'],['단색','단색'],['팔레트','팔레트'],['내 테마','내 테마'],['all','전체']];
+    const groups=[['기본','기본'],['2색','2색'],['단색','단색'],['팔레트','팔레트'],['내 테마','내 테마'],['all','전체']];
     groups.forEach(function(g){
       if(g[0]==='내 테마' && !S.custom.length) return;
       const c=el('button','chip'+(S.thFilter===g[0]?' is-on':''),g[1]);
@@ -121,32 +121,40 @@ const applyMixerSoon=debounce(function(){
 
 function mixColorRow(label,key,onKey){
   const m=mixState();
-  const r=el('div','col-row');
-  const sw=el('label','col-sw'); const fi=el('i'); sw.appendChild(fi);
-  const inp=document.createElement('input'); inp.type='color'; sw.appendChild(inp);
-  r.appendChild(sw);
-  r.appendChild(el('div','col-lab',label));
-  const hexI=document.createElement('input'); hexI.className='col-hex'; hexI.spellcheck=false; r.appendChild(hexI);
-  let tog=null;
-  if(onKey){ tog=el('button','chip'); r.appendChild(tog); }
-  const paint=function(){
-    const v=hx(m[key])||'#000000';
-    fi.style.background=v; inp.value=v;
-    if(document.activeElement!==hexI) hexI.value=v;
-    if(tog){
+  const wrap=el('div');
+  const cc=colorControl(label, ()=>m[key], function(v,live){
+    m[key]=v;
+    if(live){ applyMixerSoon(); }
+    else { applyMixer(); paintMixStrip(); }
+  }, null);
+  wrap.appendChild(cc);
+  if(onKey){
+    const bar=el('div'); bar.style.cssText='display:flex;justify-content:flex-end;margin:-4px 0 8px';
+    const tog=el('button','chip mix-tog');
+    const paint=function(){
       const ov=m[onKey]!==false;
-      tog.textContent=ov?'사용':'끔';
+      tog.textContent=ov?'이 색 사용':'꺼짐';
       tog.classList.toggle('is-on',ov);
-      sw.style.opacity=ov?'':'.4';
-    }
-  };
-  on(inp,'input',function(){ m[key]=hx(inp.value); paint(); applyMixerSoon(); });
-  on(inp,'change',function(){ m[key]=hx(inp.value); paint(); applyMixer(); paintMixer(); });
-  on(hexI,'change',function(){ const v=hx(hexI.value); if(v){ m[key]=v; applyMixer(); paintMixer(); } else paint(); });
-  on(hexI,'blur',paint);
-  if(tog) on(tog,'click',function(){ m[onKey]=(m[onKey]===false); applyMixer(); paintMixer(); });
-  paint();
-  return r;
+      cc.style.opacity=ov?'':'.45';
+    };
+    on(tog,'click',function(){ m[onKey]=(m[onKey]===false); paint(); applyMixer(); paintMixStrip(); });
+    paint(); bar.appendChild(tog); wrap.appendChild(bar);
+  }
+  return wrap;
+}
+
+/* refresh just the role strip — rebuilding all of #mixUI would shut an open picker */
+function paintMixStrip(){
+  const strip=$('#mixStrip'); if(!strip) return;
+  const act=mixColors(mixState());
+  const roles=['말풍선','배경','강조'];
+  strip.innerHTML='';
+  act.slice(0,3).forEach(function(c,i){
+    const w=el('div','mix-role');
+    const s2=el('div','mix-sw'); s2.style.background=c; w.appendChild(s2);
+    w.appendChild(el('div','mix-lab',roles[i]));
+    strip.appendChild(w);
+  });
 }
 
 function paintMixer(){
@@ -179,14 +187,9 @@ function paintMixer(){
   /* what each colour is currently doing */
   const act=mixColors(m);
   const roles=['말풍선','배경','강조'];
-  const strip=el('div','mix-strip');
-  act.slice(0,3).forEach(function(c,i){
-    const w=el('div','mix-role');
-    const s2=el('div','mix-sw'); s2.style.background=c; w.appendChild(s2);
-    w.appendChild(el('div','mix-lab',roles[i]));
-    strip.appendChild(w);
-  });
+  const strip=el('div','mix-strip'); strip.id='mixStrip';
   box.appendChild(strip);
+  paintMixStrip();
 
   const sh=el('button','btn lg ink-btn block');
   sh.innerHTML=ico('dice',17)+'색 배치 섞기';
@@ -301,7 +304,13 @@ function textField(label,get,set,ph){
 }
 function colField(label,key,againstKey){
   const t=()=>T();
-  return colorRow(label,()=>t()[key],function(v){ t()[key]=v; renderSoon(); paintThemeGrid(); save(); },
+  return colorControl(label, ()=>t()[key],
+    function(v,live){
+      t()[key]=v;
+      if(live){ renderSoon(); }
+      else { renderAll(); paintThemeGrid(); syncEditor($('#thEditor')); }
+      save();
+    },
     againstKey?()=>t()[againstKey]:null);
 }
 function swField(title,desc,key){
@@ -322,6 +331,11 @@ function choiceRow(label,opts,get,set){
   return f;
 }
 
+/* the accent to breathe into the gradient differs per tab */
+function autoGradFor(t){
+  const accent = S.mode==='chat' ? t.meBg : t.accent;
+  return autoGrad(t.bg1, accent, lum(t.bg1)<0.42);
+}
 function paintThemeEditor(force){
   const box=$('#thEditor'); if(!box) return;
   const key=S.mode+'|'+S.themeId+'|'+participants().join(',');
@@ -340,10 +354,37 @@ function paintThemeEditor(force){
 
   const bgFold=fold('배경', t().bg1, true);
   bgFold._body.appendChild(choiceRow('방식',[['solid','단색'],['grad','그라데이션'],['img','이미지']],
-    ()=>t().bgType,function(v){ t().bgType=v; paintThemeEditor(true); }));
-  bgFold._body.appendChild(colField(t().bgType==='grad'?'시작 색':'배경색','bg1'));
+    ()=>t().bgType,function(v){
+      t().bgType=v;
+      /* arriving at gradient with a stale end colour looks broken — derive it now */
+      if(v==='grad' && t().bg2auto!==false) t().bg2=autoGradFor(t());
+      paintThemeEditor(true);
+    }));
+  bgFold._body.appendChild(colorControl(t().bgType==='grad'?'시작 색':'배경색',
+    ()=>t().bg1,
+    function(v,live){
+      t().bg1=v;
+      if(t().bg2auto!==false) t().bg2=autoGradFor(t());
+      if(live) renderSoon(); else { renderAll(); paintThemeGrid(); paintThemeEditor(true); }
+      save();
+    }, null));
   if(t().bgType==='grad'){
-    bgFold._body.appendChild(colField('끝 색','bg2'));
+    bgFold._body.appendChild(colorControl('끝 색',
+      ()=>t().bg2,
+      function(v,live){
+        t().bg2=v; t().bg2auto=false;       /* touched by hand — stop following */
+        if(live) renderSoon(); else { renderAll(); paintThemeGrid(); paintThemeEditor(true); }
+        save();
+      }, null));
+    const ar=el('div','btn-row'); ar.style.margin='-2px 0 12px';
+    const ab=el('button','btn sm'+(t().bg2auto!==false?' ink-btn':''));
+    ab.innerHTML=ico('wand',14)+(t().bg2auto!==false?'자동 계산 중':'끝 색 자동 계산');
+    on(ab,'click',function(){
+      t().bg2auto=true; t().bg2=autoGradFor(t());
+      renderAll(); paintThemeGrid(); paintThemeEditor(true); save();
+      toast('배경색에 맞춰 끝 색을 다시 계산했습니다');
+    });
+    ar.appendChild(ab); bgFold._body.appendChild(ar);
     bgFold._body.appendChild(sldField('각도',()=>t().bgAngle,v=>{t().bgAngle=v;},0,360,5,'°'));
   }
   if(t().bgType==='img'){

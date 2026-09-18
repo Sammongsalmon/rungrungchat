@@ -106,16 +106,7 @@ function wire(){
       S.raw[S.mode]=''; raw.value=''; reparse(false); toast('비웠습니다');
     },true);
   });
-  on($('#btnSample'),'click',function(){
-    S.raw[S.mode]= S.mode==='chat'?SAMPLE_CHAT:SAMPLE_MEMO;
-    raw.value=curRaw(); reparse(false);
-    if(S.mode==='chat' && participants().indexOf('삼몽')>=0){
-      S.chat.me='삼몽';
-      paintMeSelect(); paintRoomChips(); paintEditList(); renderAll();
-    }
-    syncInputs();
-    toast('예시를 불러왔습니다');
-  });
+  on($('#btnSample'),'click',function(){ loadSample(S.mode,true); toast('예시를 다시 넣었습니다'); });
   on($('#btnPaste'),'click',async function(){
     try{
       const t=await navigator.clipboard.readText();
@@ -358,6 +349,21 @@ function grip(node,axis){
   });
 }
 
+/* the app opens on the sample so there is something to look at straight away */
+function loadSample(mode,render){
+  const m=mode||S.mode;
+  S.raw[m] = (m==='chat') ? SAMPLE_CHAT : SAMPLE_MEMO;
+  if(m!==S.mode) return;
+  const raw=$('#raw'); if(raw) raw.value=curRaw();
+  reparse(false);
+  if(m==='chat' && participants().indexOf('삼몽')>=0){
+    S.chat.me='삼몽';
+    paintMeSelect(); paintRoomChips(); paintEditList();
+  }
+  syncInputs();
+  if(render!==false) renderAll();
+}
+
 function paintFileHint(){
   const h=$('#fileHint'); if(!h) return;
   h.textContent='예: '+exportBase()+'.png';
@@ -410,9 +416,10 @@ function applyUiTheme(){
    ============================================================ */
 function boot(reload){
   try{ const f=$('#favicon'), b=$('#brandLogo'); if(f&&b) f.href=b.src; }catch(e){}
+  let fresh=false;
   if(!reload){
     const had=load();
-    if(!had) applyTheme(THEMES[0]);
+    if(!had){ applyTheme(THEMES[0]); fresh=true; }
   }
   applyUiTheme();                       /* after load(), so a saved light/dark choice sticks */
   applyPanes();
@@ -429,6 +436,7 @@ function boot(reload){
   syncInputs();
   setTab('input');
   moveSegInd();
+  if(fresh){ loadSample('memo',false); loadSample('chat',false); }
   renderAll();
 }
 
