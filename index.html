@@ -2139,8 +2139,8 @@ function topBar(t,opt){
    ============================================================ */
 /* A triangle with straight edges and one rounded vertex (the tip).
    Box 14 x 22, wall at x=10, bubble's bottom line at y=18.
-     M14 1            top vertex, buried inside the bubble
-     L4.45 15.5       STRAIGHT hypotenuse
+     M14 6.1          top vertex, buried inside the bubble
+     L4.86 15.82      STRAIGHT hypotenuse
      Q2.8 18 5.8 18   the tip vertex rounded — the quadratic's control point IS the
                       true vertex, so it leaves the hypotenuse and meets the bottom
                       line tangentially: no kink at either end
@@ -2150,8 +2150,8 @@ function topBar(t,opt){
    same pixel row as the bubble's background at any device ratio. */
 function tailSvg(dir,col){
   const p = dir==='you'
-    ? 'M14 1 L4.45 15.5 Q2.8 18 5.8 18 L5.8 21 L14 21 Z'
-    : 'M0 1 L9.55 15.5 Q11.2 18 8.2 18 L8.2 21 L0 21 Z';
+    ? 'M14 6.1 L4.86 15.82 Q2.8 18 5.8 18 L5.8 21 L14 21 Z'
+    : 'M0 6.1 L9.14 15.82 Q11.2 18 8.2 18 L8.2 21 L0 21 Z';
   return svgTag(14,22,'cv-tail','<path d="'+p+'" fill="'+col+'"/>');
 }
 function avatarNode(name,t){
