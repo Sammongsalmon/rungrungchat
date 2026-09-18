@@ -26,6 +26,7 @@
   .stage-area.is-flip{max-height:min(46dvh,430px)}
   .stage-bar{padding:9px 14px;min-height:48px}
   .stage-foot{padding:0 14px 9px;min-height:26px}
+  .rsz-y{display:block}
   .tabs{position:sticky;top:0;z-index:10;background:var(--surface)}
   .pane{padding:16px 15px 46px}
   .hr{margin:20px -15px}
@@ -37,6 +38,7 @@
   .workspace{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
   .stage{grid-column:2;grid-row:1;min-width:0}
   .panel{grid-column:1;grid-row:1;min-width:0;border-top:0;border-right:1px solid var(--line);box-shadow:none}
+  .rsz-x{display:block} .rsz-y{display:none}
   .stage-area{max-height:none;padding:0 14px 14px}
   .stage-area.is-flip{max-height:none}
   .appbar{height:50px}

@@ -8,7 +8,7 @@ const PV_W=390;
 const S={
   v:3, mode:'chat', ui:'auto',
   raw:{chat:'',memo:''},
-  chat:{ units:[], rooms:[], room:0, me:'', roomName:'', dateLine:'' },
+  chat:{ units:[], rooms:[], room:0, roomMode:'one', me:'', roomName:'', dateLine:'' },
   memo:{ notes:[], style:'list', group:'month', sort:'raw', appTitle:'', sel:[], open:-1, pick:false, exportWhat:'home' },
   range:{chat:[1,1], memo:[1,1]},
   theme:{ chat:deep(CHAT_DEF), memo:deep(MEMO_DEF) },
@@ -19,6 +19,7 @@ const S={
   scale:2,
   fileName:{chat:'',memo:''},
   flip:false, flipIdx:0, statusBar:true, statusTime:'11:34',
+  panelW:428, stageH:0, thFold:false,
   _dirty:0
 };
 
@@ -29,7 +30,8 @@ function snap(){
           roomName:S.chat.roomName, dateLine:S.chat.dateLine},
     memo:S.memo, range:S.range, theme:S.theme, themeId:S.themeId, custom:S.custom,
     avatars:S.avatars, pages:S.pages, scale:S.scale, fileName:S.fileName,
-    statusBar:S.statusBar, statusTime:S.statusTime, at:Date.now()
+    statusBar:S.statusBar, statusTime:S.statusTime,
+    panelW:S.panelW, stageH:S.stageH, thFold:S.thFold, at:Date.now()
   };
 }
 let lastSave=0, saveFail=false;
@@ -66,6 +68,7 @@ function load(){
     S.fileName=Object.assign({chat:'',memo:''},d.fileName);
     S.statusBar=d.statusBar!==false;
     S.statusTime=d.statusTime||'11:34';
+    S.panelW=d.panelW||428; S.stageH=d.stageH||0; S.thFold=!!d.thFold;
     lastSave=d.at||0;
     return !!(S.raw.chat||S.raw.memo);
   }catch(e){ return false; }
@@ -87,7 +90,14 @@ function curRange(){ return S.range[S.mode]; }
 function roomUnits(){
   if(!S.chat.units.length) return [];
   if(S.chat.rooms.length<=1) return S.chat.units;
+  if(S.chat.roomMode!=='one') return S.chat.units;   /* split / group use everything */
   return S.chat.units.filter(u=>u.room===S.chat.room);
+}
+/* rooms that actually have visible messages, in first-appearance order */
+function liveRooms(){
+  const seen={}, out=[];
+  liveList().forEach(function(u){ if(!seen[u.room]){ seen[u.room]=1; out.push(u.room); } });
+  return out;
 }
 function sortedNotes(){
   const a=S.memo.notes.slice();
@@ -116,12 +126,41 @@ function avatarFor(name){
 }
 function participants(){
   const set={}, out=[];
-  S.chat.units.forEach(u=>{ [u.who,u.to].forEach(n=>{ if(n&&!set[n]){set[n]=1;out.push(n);} }); });
+  S.chat.units.forEach(function(u){
+    const all=[u.who].concat(u.tos&&u.tos.length?u.tos:[u.to]);
+    all.forEach(function(n){ if(n&&!set[n]){set[n]=1;out.push(n);} });
+  });
   return out;
 }
-function roomPartner(){
-  const r=S.chat.rooms[S.chat.room];
+/* how many people are in the current room — caps the unread count */
+function roomMembers(ri){
+  if(S.chat.roomMode==='group') return Math.max(2,participants().length);
+  const r=S.chat.rooms[ri==null?S.chat.room:ri];
+  return r&&r.names ? Math.max(2,r.names.length) : 2;
+}
+function isGroupRoom(){ return roomMembers()>2; }
+function roomPartner(ri){
+  if(S.chat.roomMode==='group'){
+    const o=participants().filter(n=>n!==S.chat.me);
+    return o.join(', ');
+  }
+  const r=S.chat.rooms[ri==null?S.chat.room:ri];
   if(!r) return '';
   const o=r.names.filter(n=>n!==S.chat.me);
   return o.length?o.join(', '):r.names[0];
+}
+/* a chat "cell" = one < 보낸사람 … > block. Pages are cut on these, never mid-cell. */
+function chatCells(items){
+  const cells=[]; let cur=null;
+  items.forEach(function(u,i){
+    const mine=u.who===S.chat.me;
+    if(!cur || cur.gi!==u.gi || cur.mine!==mine){ cur={gi:u.gi,mine:mine,id:u.id,a:i,b:i+1}; cells.push(cur); }
+    else cur.b=i+1;
+  });
+  return cells;
+}
+function chatMaxPages(){
+  if(S.mode!=='chat') return 1;
+  if(S.chat.roomMode==='split') return Math.max(1,liveRooms().length);
+  return Math.max(1,chatCells(liveList()).length);
 }

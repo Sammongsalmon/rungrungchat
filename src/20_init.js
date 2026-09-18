@@ -55,7 +55,15 @@ const SAMPLE_CHAT=[
 '< 보낸사람 : 아모가싯디 / 발신시간 : 09:33 / 받는사람 : 쿠베라 >','',
 '[……그래]','',
 '< 보낸사람 : 아모가싯디 / 발신시간 : 09:34 / 받는사람 : 쿠베라 >','',
-'[여섯 시]','[사탕 사서 간다]','[**두 봉지**]','[머리 말리라고 해라. 감기 걸려]','[가람아]'
+'[여섯 시]','[사탕 사서 간다]','[**두 봉지**]','[머리 말리라고 해라. 감기 걸려]','[가람아]','',
+'< 보낸사람 : 아모가싯디 / 발신시간 : 18:02 / 받는사람 : 쿠베라, 아미타바 >','',
+'[사탕 샀다]','[**두 봉지**]','[아미타바 니 몫은 없다]','',
+'< 보낸사람 : 아미타바 / 발신시간 : 18:03 / 받는사람 : 아모가싯디, 쿠베라 >','',
+'[왜!!!!!]','[형아 나 오늘 링크도 보내줬잖아]','',
+'< 보낸사람 : 쿠베라 / 발신시간 : 18:04 / 받는사람 : 아모가싯디, 아미타바 >','',
+'[아빠 최고]','[이모 미안]','',
+'< 보낸사람 : 아모가싯디 / 발신시간 : 18:04 / 받는사람 : 쿠베라, 아미타바 >','',
+'[이모 아니다]','[…한 봉지는 나눠 먹어라]'
 ].join('\n');
 
 const SAMPLE_MEMO=[
@@ -190,6 +198,14 @@ function wire(){
   bindText($('#roomName'),()=>S.chat.roomName,function(v){ S.chat.roomName=v; renderSoon(); save(); });
   bindText($('#chatDate'),()=>S.chat.dateLine,function(v){ S.chat.dateLine=v; renderSoon(); save(); });
   on($('#meSel'),'change',function(){ S.chat.me=$('#meSel').value; paintRoomChips(); paintEditList(); renderAll(); });
+  bindChoice('roomMode',()=>S.chat.roomMode,function(v){
+    S.chat.roomMode=v;
+    const b=baseList().length;
+    S.range.chat=[1,Math.max(1,b)];
+    S.flipIdx=0;
+    if(v==='split') S.pages.chat=1;
+    afterDataChange(true);
+  });
 
   /* memo options */
   bindText($('#memoTitle'),()=>S.memo.appTitle,function(v){ S.memo.appTitle=v; renderSoon(); save(); });
@@ -211,6 +227,13 @@ function wire(){
   on($('#btnSelInv'),'click',function(){ baseList().forEach(u=>u.on=(u.on===false)); paintEditList(); clampPages(); renderAll(); });
 
   /* theme */
+  on($('#btnThFold'),'click',function(){ S.thFold=!S.thFold; paintThemeFold(); save(); });
+  on($('#btnFoldAll'),'click',function(){
+    const folds=$$('#thEditor .fold');
+    const anyOpen=folds.some(f=>f.classList.contains('is-open'));
+    folds.forEach(f=>f.classList.toggle('is-open',!anyOpen));
+    this.textContent=anyOpen?'모두 펼치기':'모두 접기';
+  });
   on($('#btnThSave'),'click',saveCustomTheme);
   on($('#btnThReset'),'click',function(){
     const t=findTheme(S.themeId);
@@ -283,8 +306,13 @@ function wire(){
   /* deck interaction */
   const deck=$('#deck');
   on(deck,'click',function(e){
+    if(S.mode!=='memo') return;
+    /* the phone's own back chevron walks out of a memo too */
+    if(e.target.closest('[data-act="home"]')){
+      S.memo.open=-1; paintStageTools(); paintPagesSlider(); renderAll(); return;
+    }
     const card=e.target.closest('[data-note]');
-    if(!card||S.mode!=='memo') return;
+    if(!card) return;
     const id=card.dataset.note;
     if(S.memo.pick){
       const i=S.memo.sel.indexOf(id);
@@ -319,12 +347,69 @@ function wire(){
   });
   on($('#btnHelp'),'click',showHelp);
 
+  bindGrips();
+
   /* resize */
   let rt;
-  on(window,'resize',function(){ clearTimeout(rt); rt=setTimeout(function(){ moveSegInd(); layoutDeck(false); },110); });
+  on(window,'resize',function(){ clearTimeout(rt); rt=setTimeout(function(){ moveSegInd(); applyPanes(); layoutDeck(false); },110); });
   on(window,'orientationchange',function(){ setTimeout(function(){ moveSegInd(); layoutDeck(false); },260); });
   on(document,'visibilitychange',function(){ if(!document.hidden) paintSaveStat(); });
   on(window,'beforeunload',function(){ try{ localStorage.setItem(LSK,JSON.stringify(snap())); }catch(e){} });
+}
+
+/* ---------- draggable pane grips ---------- */
+function stacked(){
+  return window.matchMedia('(max-width:1023px)').matches &&
+        !window.matchMedia('(max-width:1023px) and (orientation:landscape) and (min-width:660px)').matches;
+}
+function applyPanes(){
+  document.documentElement.style.setProperty('--panel-w',(S.panelW||428)+'px');
+  const a=$('#stageArea');
+  if(stacked() && S.stageH) a.style.maxHeight=S.stageH+'px';
+  else a.style.removeProperty('max-height');
+}
+function bindGrips(){
+  grip($('#rszX'),'x'); grip($('#rszY'),'y');
+}
+function grip(node,axis){
+  if(!node) return;
+  let start=0, base=0, live=0;
+  on(node,'pointerdown',function(e){
+    node.setPointerCapture&&node.setPointerCapture(e.pointerId);
+    node.classList.add('is-drag');
+    document.body.style.cursor = axis==='x'?'col-resize':'row-resize';
+    if(axis==='x'){ start=e.clientX; base=$('.panel').getBoundingClientRect().width; }
+    else { start=e.clientY; base=$('#stageArea').getBoundingClientRect().height; }
+    live=base; e.preventDefault();
+  });
+  on(node,'pointermove',function(e){
+    if(!node.classList.contains('is-drag')) return;
+    if(axis==='x'){
+      const max=Math.min(720,Math.max(320,window.innerWidth-380));
+      live=clamp(base+(e.clientX-start),300,max);
+      document.documentElement.style.setProperty('--panel-w',Math.round(live)+'px');
+    }else{
+      const max=Math.max(220,window.innerHeight-280);
+      live=clamp(base+(e.clientY-start),170,max);
+      $('#stageArea').style.maxHeight=Math.round(live)+'px';
+    }
+    layoutDeck(false);
+    e.preventDefault();
+  });
+  const end=function(e){
+    if(!node.classList.contains('is-drag')) return;
+    node.classList.remove('is-drag');
+    document.body.style.cursor='';
+    try{ node.releasePointerCapture&&node.releasePointerCapture(e.pointerId); }catch(_){}
+    if(axis==='x') S.panelW=Math.round(live); else S.stageH=Math.round(live);
+    layoutDeck(false); save();
+  };
+  on(node,'pointerup',end); on(node,'pointercancel',end); on(node,'lostpointercapture',end);
+  on(node,'dblclick',function(){
+    if(axis==='x'){ S.panelW=428; } else { S.stageH=0; }
+    applyPanes(); layoutDeck(false); save();
+    toast('기본 크기로 되돌렸습니다');
+  });
 }
 
 function paintFileHint(){
@@ -383,6 +468,7 @@ function boot(reload){
     if(!had) applyTheme(THEMES[0]);
   }
   applyUiTheme();                       /* after load(), so a saved light/dark choice sticks */
+  applyPanes();
   $('#btnStatusBar').classList.toggle('is-on',S.statusBar);
   $('#btnFlip').classList.toggle('is-on',S.flip);
   $('#raw').value=curRaw();
@@ -390,6 +476,7 @@ function boot(reload){
   paintFileHint();
   paintSaveStat();
   paintThemeGrid();
+  paintThemeFold();
   paintThemeEditor(true);
   syncInputs();
   setTab('input');

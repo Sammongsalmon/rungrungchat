@@ -174,6 +174,16 @@ html[data-ui="dark"] .seg-ind{background:var(--surface-3)}
   position:relative;
 }
 
+/* ---- drag-to-resize grips ---- */
+.rsz{position:absolute;z-index:32;display:none;touch-action:none;user-select:none;-webkit-user-select:none}
+.rsz i{position:absolute;display:block;background:var(--line);border-radius:99px;transition:background .16s,transform .16s}
+.rsz:hover i,.rsz.is-drag i{background:var(--accent);transform:scale(1.05)}
+.rsz-x{left:-6px;top:0;bottom:0;width:12px;cursor:col-resize}
+.rsz-x i{left:4.5px;top:50%;width:3px;height:46px;margin-top:-23px}
+.rsz-y{left:0;right:0;bottom:-7px;height:15px;cursor:row-resize}
+.rsz-y i{top:6px;left:50%;width:48px;height:3px;margin-left:-24px}
+@media (min-width:1024px){ .rsz-x{display:block} }
+
 /* ============================================================
    2. STAGE (preview)
    ============================================================ */
@@ -194,7 +204,7 @@ html[data-ui="dark"] .seg-ind{background:var(--surface-3)}
 .stage-area{
   flex:1 1 auto;min-height:0;overflow:auto;
   padding:4px 28px 34px;
-  display:flex;align-items:flex-start;justify-content:center;
+  display:flex;align-items:flex-start;
   scrollbar-gutter:stable;
   overscroll-behavior-x:contain;
 }
@@ -202,7 +212,7 @@ html[data-ui="dark"] .seg-ind{background:var(--surface-3)}
 
 .deck{
   position:relative;display:flex;gap:26px;align-items:flex-start;
-  justify-content:center;flex-wrap:wrap;
+  justify-content:flex-start;flex-wrap:nowrap;
   transition:opacity .2s;
 }
 .deck.is-flip{
@@ -611,6 +621,23 @@ html[data-ui="dark"] .sld-bub{color:#15171B}
 .fmt.i{font-style:italic;font-family:Georgia,serif}
 .fmt.s{text-decoration:line-through}
 
+/* ---- collapsible section header ---- */
+.sec-fold{
+  display:flex;align-items:center;gap:5px;padding:2px 4px 2px 0;margin-left:-2px;border-radius:7px;
+  transition:background .16s;
+}
+.sec-fold:hover{background:var(--surface-2)}
+.sec-fold .chev{display:flex;color:var(--text-4);transition:transform .24s cubic-bezier(.22,1,.36,1)}
+.sec-fold .chev svg{width:13px;height:13px}
+.sec-fold[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.th-folded{display:flex;align-items:center;gap:11px;padding:4px 0 2px}
+.th-folded .th{width:46px;height:46px;flex:0 0 auto;aspect-ratio:auto}
+.th-folded .th-name{display:none}
+.th-folded .th-now{flex:1 1 auto;min-width:0}
+.th-folded .th-now b{display:block;font-size:13.5px;font-weight:650;letter-spacing:-.015em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.th-folded .th-now span{display:block;font-size:11.5px;color:var(--text-3);margin-top:1px}
+
 /* ============================================================
    8. MISC
    ============================================================ */
@@ -746,9 +773,11 @@ html[data-ui="dark"] .toast{color:#15171B}
   word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap;
   min-width:0;max-width:100%;
 }
-.cv-tail{position:absolute;top:0;width:10px;height:12px;overflow:visible}
-.cv-row.you .cv-tail{left:-7px}
-.cv-row.me .cv-tail{right:-7px}
+.cv-tail{position:absolute;bottom:0;width:13px;height:18px;overflow:visible}
+.cv-row.you .cv-tail{left:-9px}
+.cv-row.me .cv-tail{right:-9px}
+.cv-readlabel{align-self:flex-end;margin:0 3px 2px;font-weight:600;letter-spacing:-.01em}
+.cv-row.you .cv-readlabel{align-self:flex-start}
 .cv-meta{
   flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;
   font-size:10.5px;line-height:1.3;font-weight:500;letter-spacing:-.01em;
@@ -871,6 +900,7 @@ html[data-ui="dark"] .toast{color:#15171B}
   .stage-area.is-flip{max-height:min(46dvh,430px)}
   .stage-bar{padding:9px 14px;min-height:48px}
   .stage-foot{padding:0 14px 9px;min-height:26px}
+  .rsz-y{display:block}
   .tabs{position:sticky;top:0;z-index:10;background:var(--surface)}
   .pane{padding:16px 15px 46px}
   .hr{margin:20px -15px}
@@ -882,6 +912,7 @@ html[data-ui="dark"] .toast{color:#15171B}
   .workspace{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
   .stage{grid-column:2;grid-row:1;min-width:0}
   .panel{grid-column:1;grid-row:1;min-width:0;border-top:0;border-right:1px solid var(--line);box-shadow:none}
+  .rsz-x{display:block} .rsz-y{display:none}
   .stage-area{max-height:none;padding:0 14px 14px}
   .stage-area.is-flip{max-height:none}
   .appbar{height:50px}
@@ -993,6 +1024,15 @@ html[data-ui="dark"] .toast{color:#15171B}
           <!-- chat-only -->
           <div class="sec" data-only="chat">
             <div class="sec-h"><span class="sec-t">대화방</span></div>
+            <div class="field" id="roomModeField">
+              <span class="lab">인물이 3명 이상일 때</span>
+              <div class="choice" data-choice="roomMode">
+                <button class="choice-b is-on" data-v="one">한 방만</button>
+                <button class="choice-b" data-v="split">방마다 한 장</button>
+                <button class="choice-b" data-v="group">단톡으로 합치기</button>
+              </div>
+              <p class="hint" id="roomModeHint"></p>
+            </div>
             <div class="chips" id="roomChips"></div>
             <div class="field" style="margin-top:12px">
               <label class="lab" for="roomName">채팅방 이름</label>
@@ -1074,16 +1114,22 @@ html[data-ui="dark"] .toast{color:#15171B}
         <!-- ---------- PANE: THEME ---------- -->
         <div class="pane" data-pane="theme">
           <div class="sec">
-            <div class="sec-h"><span class="sec-t">테마</span>
+            <div class="sec-h">
+              <button class="sec-fold" id="btnThFold" aria-expanded="true" title="테마 목록 접기">
+                <span class="chev" data-ico="chev"></span><span class="sec-t">테마</span>
+              </button>
               <div class="sec-x">
                 <button class="btn sm ghost" id="btnThImport" data-ico-pre="upload">불러오기</button>
                 <button class="btn sm ghost" id="btnThExport" data-ico-pre="download">내보내기</button>
               </div>
             </div>
-            <div class="chips" id="thFilter" style="margin-bottom:11px"></div>
-            <div class="th-grid" id="thGrid"></div>
-            <div class="btn-row fill" style="margin-top:11px">
-              <button class="btn sm" id="btnThSave" data-ico-pre="save">현재 설정을 테마로 저장</button>
+            <div id="thFolded" class="th-folded" hidden></div>
+            <div id="thBody">
+              <div class="chips" id="thFilter" style="margin-bottom:11px"></div>
+              <div class="th-grid" id="thGrid"></div>
+              <div class="btn-row fill" style="margin-top:11px">
+                <button class="btn sm" id="btnThSave" data-ico-pre="save">현재 설정을 테마로 저장</button>
+              </div>
             </div>
             <input type="file" id="thFile" accept=".json,.rrtheme,application/json" hidden>
           </div>
@@ -1092,7 +1138,10 @@ html[data-ui="dark"] .toast{color:#15171B}
 
           <div class="sec">
             <div class="sec-h"><span class="sec-t">직접 꾸미기</span>
-              <div class="sec-x"><button class="btn sm ghost" id="btnThReset">되돌리기</button></div>
+              <div class="sec-x">
+                <button class="btn sm ghost" id="btnFoldAll">모두 접기</button>
+                <button class="btn sm ghost" id="btnThReset">되돌리기</button>
+              </div>
             </div>
             <div id="thEditor"></div>
           </div>
@@ -1168,6 +1217,8 @@ html[data-ui="dark"] .toast{color:#15171B}
           <button class="icon-btn" id="btnFlip" title="플립 모드" aria-label="플립 모드" data-ico="layers"></button>
         </div>
       </div>
+      <div class="rsz rsz-x" id="rszX" title="패널 너비 조절" aria-label="패널 너비 조절"><i></i></div>
+      <div class="rsz rsz-y" id="rszY" title="미리보기 높이 조절" aria-label="미리보기 높이 조절"><i></i></div>
       <div class="stage-area" id="stageArea">
         <div class="fit-outer" id="fitOuter"><div class="fit-inner" id="fitInner">
           <div class="deck" id="deck"></div>
@@ -1419,6 +1470,12 @@ function bracketSegs(block){
 const CHAT_HEAD=/^\s*<\s*보낸\s*사람\s*[:：]?\s*([\s\S]*?)\s*\/\s*발신\s*시간\s*[:：]?\s*([\s\S]*?)\s*\/\s*받는\s*사람\s*[:：]?\s*([\s\S]*?)\s*>\s*$/;
 const CHAT_HEAD_LOOSE=/^\s*<\s*([^<>\/]+?)\s*\/\s*([0-9]{1,2}\s*[:：]\s*[0-9]{2}(?:\s*[APap][Mm])?|오전[^\/]*|오후[^\/]*)\s*\/\s*([^<>]+?)\s*>\s*$/;
 
+/* "쿠베라, 아미타바" / "쿠베라 및 아미타바" -> ['쿠베라','아미타바'] */
+function splitNames(v){
+  return String(v||'').split(/\s*[,،、;]\s*|\s+및\s+|\s+와\s+|\s+과\s+|\s+and\s+/i)
+    .map(x=>x.trim()).filter(Boolean);
+}
+
 function parseChat(src){
   const text=stripNoise(src);
   const lines=text.split('\n');
@@ -1443,7 +1500,7 @@ function parseChat(src){
       let to=m[3].trim(), mis='';
       const mm=/^([\s\S]*?)\s*[（(]\s*(?:본래|원래|실제)?\s*보내려\s*한?\s*사람\s*[:：]?\s*([\s\S]*?)\s*[）)]\s*$/.exec(to);
       if(mm){ to=mm[1].trim(); mis=mm[2].trim(); }
-      cur={ who:m[1].trim(), time:m[2].trim(), to:to, mis:mis };
+      cur={ who:m[1].trim(), time:m[2].trim(), to:to, tos:splitNames(to), mis:mis };
       continue;
     }
     if(cur) buf.push(L);
@@ -1453,14 +1510,22 @@ function parseChat(src){
   /* ---- flatten to units + build rooms ---- */
   const units=[], roomMap={}, rooms=[], seen={};
   groups.forEach(function(g,gi){
-    const key=[g.who,g.to].slice().sort().join('\u0000');
-    if(roomMap[key]==null){ roomMap[key]=rooms.length; rooms.push({key:key,names:[g.who,g.to],n:0}); }
+    /* a room is the whole set of people in the header, so 1:1 and group chats
+       both fall out of the same rule */
+    const all=[g.who].concat(g.tos.length?g.tos:[g.to]);
+    const uniq=[]; all.forEach(function(n){ if(n && uniq.indexOf(n)<0) uniq.push(n); });
+    const key=uniq.slice().sort().join('\u0001');
+    if(roomMap[key]==null){
+      roomMap[key]=rooms.length;
+      rooms.push({key:key, names:uniq.slice(), n:0, group:uniq.length>2});
+    }
     const ri=roomMap[key];
     rooms[ri].n+=g.msgs.length;
-    seen[g.who]=(seen[g.who]||0)+1; seen[g.to]=(seen[g.to]||0)+1;
+    uniq.forEach(function(n){ seen[n]=(seen[n]||0)+1; });
     g.msgs.forEach(function(t,bi){
-      units.push({ id:'c'+gi+'_'+bi, gi:gi, room:ri, who:g.who, time:g.time, to:g.to,
-                   mis:bi===0?g.mis:'', text:t, on:true });
+      units.push({ id:'c'+gi+'_'+bi, gi:gi, room:ri, who:g.who, time:g.time,
+                   to:g.to, tos:g.tos.slice(),
+                   mis:bi===0?g.mis:'', text:t, unread:0, on:true });
     });
   });
 
@@ -1606,7 +1671,8 @@ const CHAT_DEF={
   misBg:'#E0453A', misText:'#FFFFFF',
   radius:16, fontSize:15, nameSize:12.5, timeSize:10.5, barSize:16.5,
   tail:true, avatar:true, avatarR:14, avatarSize:38,
-  showInput:true, inputBg:'#FFFFFF', showHome:true, statusDark:true, showRead:true, readCol:'#F5C400'
+  showInput:true, inputBg:'#FFFFFF', showHome:true, statusDark:true,
+  showRead:true, readLabel:'읽음', readCol:'#F5C400'
 };
 const MEMO_DEF={
   bgType:'solid', bg1:'#FFFFFF', bg2:'#F2F2F7', bgAngle:160, bgImg:'', bgDim:0,
@@ -1649,13 +1715,13 @@ function themeFromPalette(id,name,pal,opt){
   const bg   = dark ? s[0] : s[3];
   /* fitFill can drag a bubble back toward the wallpaper — separate again afterwards */
   const you  = separate(fitFill(dark ? mix(s[1],'#FFFFFF',0.06) : mix(s[3],'#FFFFFF',0.82), 7.2), bg, 1.16);
-  const me   = separate(fitFill(acc===bg?mix(acc,dark?'#FFFFFF':'#000000',0.18):acc, 5.6), bg, 1.22);
+  const me   = separate(fitFill(acc===bg?mix(acc,dark?'#FFFFFF':'#000000',0.18):acc, 4.85), bg, 1.22);
   const bar  = dark ? mix(s[0],s[1],0.62) : mix(s[3],'#FFFFFF',0.52);
   const ink  = dark ? '#F2F4F7' : '#16181C';
   const chat={
     bgType:'solid', bg1:bg, bg2:dark?mix(s[0],'#000000',0.35):mix(s[3],s[2],0.35), bgAngle:160, bgImg:'', bgDim:0,
     barBg:fitFill(bar,6.2), barText:ensure(dark?ink:s[0],fitFill(bar,6.2),6), barLine:!dark,
-    meBg:me,  meText:ensure(readable(me),me,5.5),
+    meBg:me,  meText:ensure(readable(me),me,4.6),
     youBg:you, youText:ensure(readable(you),you,7),
     nameCol:ensure(dark?mix(ink,bg,0.25):mix(s[0],bg,0.12),bg,3.6),
     timeCol:ensure(mix(readable(bg),bg,0.42),bg,2.6),
@@ -1664,21 +1730,38 @@ function themeFromPalette(id,name,pal,opt){
     radius:opt.radius||16, fontSize:15, nameSize:12.5, timeSize:10.5, barSize:16.5,
     tail:opt.tail!==false, avatar:true, avatarR:14, avatarSize:38,
     showInput:true, inputBg: dark?mix(bg,'#FFFFFF',0.09):mix(bar,'#FFFFFF',0.6),
-    showHome:true, statusDark:!dark, showRead:true, readCol:ensure(acc,bg,2.4)
+    showHome:true, statusDark:!dark, showRead:true, readLabel:'읽음', readCol:ensure(acc,bg,2.4)
   };
   chat.dateText=ensure(readable(chat.dateBg),chat.dateBg,5);
   chat.misText=ensure(readable(chat.misBg),chat.misBg,5);
 
   /* ---------- memo ---------- */
-  const mbg  = dark ? mix(s[0],'#000000',0.25) : mix(s[3],'#FFFFFF',0.62);
-  const card = fitFill(dark ? mix(s[0],'#FFFFFF',0.075) : separate(mix(s[3],'#FFFFFF',0.9),mbg,1.1), 9);
+  /* Light memo themes read as dead when the page is white and the card is greyed to
+     separate from it. Tint the PAGE with a mid palette colour and keep the card the
+     lightest thing on screen instead. */
+  let mbg, card;
+  if(dark){
+    mbg  = mix(s[0],'#000000',0.25);
+    card = fitFill(mix(s[0],'#FFFFFF',0.075), 9);
+  }else{
+    /* tint from the most colourful mid-tone, not just the palest swatch */
+    let tint=s[2];
+    if(chroma(s[1])>chroma(tint)*1.2) tint=s[1];
+    if(chroma(s[3])>chroma(tint)*1.2) tint=s[3];
+    mbg = mix(tint,'#FFFFFF',0.46);
+    let g=0; while(lum(mbg)<0.70 && g++<18) mbg=mix(mbg,'#FFFFFF',0.11);
+    card = mix(s[3],'#FFFFFF',0.84);
+    let guard=0;
+    while(lum(card)-lum(mbg)<0.09 && guard++<20) card=mix(card,'#FFFFFF',0.2);
+    card = fitFill(card, 9);
+  }
   const mtitle=ensure(dark?'#F4F6F8':s[0],card,9);
   const memo={
     bgType:'solid', bg1:mbg, bg2:dark?mix(s[0],'#000000',0.5):mix(s[3],'#FFFFFF',0.3), bgAngle:160, bgImg:'', bgDim:0,
     barBg:fitFill(mbg,7.2), barText:ensure(mtitle,fitFill(mbg,7.2),7), barLine:true,
     cardBg:card, titleCol:ensure(mtitle,card,6.4), bodyCol:ensure(mix(mtitle,card,0.22),card,4.8),
     subCol:ensure(mix(mtitle,card,0.46),card,3.3),
-    accent:ensure(acc,card,2.4), tagBg:fitFill(mix(card,acc,dark?0.26:0.18),5.2), tagText:'',
+    accent:ensure(acc,card,2.6), tagBg:fitFill(mix(card,acc,dark?0.3:0.26),5.2), tagText:'',
     radius:14, fontSize:15, titleSize:22, listTitleSize:15.5, subSize:12.5, bigSize:31, barSize:16.5,
     paper:'none', statusDark:!dark, showSearch:true, showHome:true
   };
@@ -1687,10 +1770,11 @@ function themeFromPalette(id,name,pal,opt){
   return { id:id, name:name, pal:pal.slice(), chat:chat, memo:memo };
 }
 
-function monoTheme(id,name,h){
+function monoTheme(id,name,h,sat,lit){
+  const acc=fromHsl(h, sat==null?0.86:sat, lit==null?0.52:lit);
   return themeFromPalette(id,name,[
-    fromHsl(h,0.52,0.24), fromHsl(h,0.64,0.47), fromHsl(h,0.55,0.76), fromHsl(h,0.52,0.955)
-  ],{accent:fromHsl(h,0.64,0.47)});
+    fromHsl(h,0.50,0.21), acc, fromHsl(h,0.70,0.80), fromHsl(h,0.72,0.955)
+  ],{accent:acc});
 }
 
 /* ---- hand-tuned signature themes ---- */
@@ -1755,10 +1839,20 @@ const SHOT_PAL=[
  ['peri','페리윙클',    ['#8B90E8','#AEC2FF','#CFDBFF','#ECF1FF']],
  ['rosewood','로즈우드',['#5A4544','#825A5B','#9E7676','#FCF8EF']],
  ['sage','세이지 톤',   ['#3B4F46','#4E6C54','#AA8B55','#F4E9C9']],
- ['blush','블러시',     ['#890D2F','#EE6984','#F9C8C4','#FEF5E4']]
+ ['blush','블러시',     ['#890D2F','#EE6984','#F9C8C4','#FEF5E4']],
+ ['popneon','네온 팝',   ['#5003C1','#AC02A9','#FE467A','#FFD51E']],
+ ['tropic','트로피컬',   ['#1DCED8','#54E07D','#FF9E51','#FFF9D7']],
+ ['lime','라임 그로브',  ['#2B7C13','#75C459','#F7E8C1','#FFF8CE']],
+ ['citrus','시트러스',   ['#208DAE','#31B8D5','#FED758','#FCE49A']],
+ ['grape','자몽 소다',   ['#722F99','#FF9393','#FCE7CC','#F7F2EC']],
+ ['melon','워터멜론',    ['#00B8AA','#F6416C','#FFDE7D','#F8F3D5']],
+ ['bloom','블룸',        ['#FF2E63','#FF7BA9','#FFD5E5','#FFF6FA']],
+ ['aqua','아쿠아 팝',    ['#0057B8','#00A8E8','#7DE2FC','#EAFBFF']]
 ];
-const MONO=[['red','빨강',2],['orange','주황',26],['yellow','노랑',45],['green','초록',140],
-            ['blue','파랑',211],['navy','남색',242],['violet','보라',283]];
+/* hue, saturation, lightness tuned per colour — a yellow at mid lightness turns olive */
+const MONO=[['red','빨강',4,0.82,0.55],['orange','주황',27,0.94,0.55],['yellow','노랑',48,0.97,0.56],
+            ['green','초록',142,0.66,0.43],['blue','파랑',211,0.86,0.50],
+            ['navy','남색',244,0.70,0.55],['violet','보라',285,0.66,0.55]];
 
 function buildThemes(){
   const out=[];
@@ -1769,7 +1863,7 @@ function buildThemes(){
     t.pal=h.pal.slice(); t.grp='기본';
     out.push(t);
   });
-  MONO.forEach(function(m){ const t=monoTheme('mono-'+m[0],m[1],m[2]); t.grp='단색'; out.push(t); });
+  MONO.forEach(function(m){ const t=monoTheme('mono-'+m[0],m[1],m[2],m[3],m[4]); t.grp='단색'; out.push(t); });
   SHOT_PAL.forEach(function(p){ const t=themeFromPalette('sh-'+p[0],p[1],p[2],{}); t.grp='팔레트'; out.push(t); });
   out.forEach(function(t){
     t.chat=Object.assign({},CHAT_DEF,t.chat);
@@ -1799,7 +1893,7 @@ const PV_W=390;
 const S={
   v:3, mode:'chat', ui:'auto',
   raw:{chat:'',memo:''},
-  chat:{ units:[], rooms:[], room:0, me:'', roomName:'', dateLine:'' },
+  chat:{ units:[], rooms:[], room:0, roomMode:'one', me:'', roomName:'', dateLine:'' },
   memo:{ notes:[], style:'list', group:'month', sort:'raw', appTitle:'', sel:[], open:-1, pick:false, exportWhat:'home' },
   range:{chat:[1,1], memo:[1,1]},
   theme:{ chat:deep(CHAT_DEF), memo:deep(MEMO_DEF) },
@@ -1810,6 +1904,7 @@ const S={
   scale:2,
   fileName:{chat:'',memo:''},
   flip:false, flipIdx:0, statusBar:true, statusTime:'11:34',
+  panelW:428, stageH:0, thFold:false,
   _dirty:0
 };
 
@@ -1820,7 +1915,8 @@ function snap(){
           roomName:S.chat.roomName, dateLine:S.chat.dateLine},
     memo:S.memo, range:S.range, theme:S.theme, themeId:S.themeId, custom:S.custom,
     avatars:S.avatars, pages:S.pages, scale:S.scale, fileName:S.fileName,
-    statusBar:S.statusBar, statusTime:S.statusTime, at:Date.now()
+    statusBar:S.statusBar, statusTime:S.statusTime,
+    panelW:S.panelW, stageH:S.stageH, thFold:S.thFold, at:Date.now()
   };
 }
 let lastSave=0, saveFail=false;
@@ -1857,6 +1953,7 @@ function load(){
     S.fileName=Object.assign({chat:'',memo:''},d.fileName);
     S.statusBar=d.statusBar!==false;
     S.statusTime=d.statusTime||'11:34';
+    S.panelW=d.panelW||428; S.stageH=d.stageH||0; S.thFold=!!d.thFold;
     lastSave=d.at||0;
     return !!(S.raw.chat||S.raw.memo);
   }catch(e){ return false; }
@@ -1878,7 +1975,14 @@ function curRange(){ return S.range[S.mode]; }
 function roomUnits(){
   if(!S.chat.units.length) return [];
   if(S.chat.rooms.length<=1) return S.chat.units;
+  if(S.chat.roomMode!=='one') return S.chat.units;   /* split / group use everything */
   return S.chat.units.filter(u=>u.room===S.chat.room);
+}
+/* rooms that actually have visible messages, in first-appearance order */
+function liveRooms(){
+  const seen={}, out=[];
+  liveList().forEach(function(u){ if(!seen[u.room]){ seen[u.room]=1; out.push(u.room); } });
+  return out;
 }
 function sortedNotes(){
   const a=S.memo.notes.slice();
@@ -1907,14 +2011,43 @@ function avatarFor(name){
 }
 function participants(){
   const set={}, out=[];
-  S.chat.units.forEach(u=>{ [u.who,u.to].forEach(n=>{ if(n&&!set[n]){set[n]=1;out.push(n);} }); });
+  S.chat.units.forEach(function(u){
+    const all=[u.who].concat(u.tos&&u.tos.length?u.tos:[u.to]);
+    all.forEach(function(n){ if(n&&!set[n]){set[n]=1;out.push(n);} });
+  });
   return out;
 }
-function roomPartner(){
-  const r=S.chat.rooms[S.chat.room];
+/* how many people are in the current room — caps the unread count */
+function roomMembers(ri){
+  if(S.chat.roomMode==='group') return Math.max(2,participants().length);
+  const r=S.chat.rooms[ri==null?S.chat.room:ri];
+  return r&&r.names ? Math.max(2,r.names.length) : 2;
+}
+function isGroupRoom(){ return roomMembers()>2; }
+function roomPartner(ri){
+  if(S.chat.roomMode==='group'){
+    const o=participants().filter(n=>n!==S.chat.me);
+    return o.join(', ');
+  }
+  const r=S.chat.rooms[ri==null?S.chat.room:ri];
   if(!r) return '';
   const o=r.names.filter(n=>n!==S.chat.me);
   return o.length?o.join(', '):r.names[0];
+}
+/* a chat "cell" = one < 보낸사람 … > block. Pages are cut on these, never mid-cell. */
+function chatCells(items){
+  const cells=[]; let cur=null;
+  items.forEach(function(u,i){
+    const mine=u.who===S.chat.me;
+    if(!cur || cur.gi!==u.gi || cur.mine!==mine){ cur={gi:u.gi,mine:mine,id:u.id,a:i,b:i+1}; cells.push(cur); }
+    else cur.b=i+1;
+  });
+  return cells;
+}
+function chatMaxPages(){
+  if(S.mode!=='chat') return 1;
+  if(S.chat.roomMode==='split') return Math.max(1,liveRooms().length);
+  return Math.max(1,chatCells(liveList()).length);
 }
 
 /* ============================================================
@@ -1975,7 +2108,9 @@ function topBar(t,opt){
   const n=el('div','pv-top'+(opt.center?' center':''));
   n.style.background=t.barBg; n.style.color=t.barText;
   if(opt.back!==false){
-    const b=el('div','tb-back'); b.appendChild(lineIco('left',22,t.barText,2)); n.appendChild(b);
+    const b=el('div','tb-back'); b.appendChild(lineIco('left',22,t.barText,2));
+    if(opt.backAct){ b.dataset.act=opt.backAct; b.style.cursor='pointer'; b.title='홈으로'; }
+    n.appendChild(b);
   }
   const mid=el('div','tb-mid');
   if(opt.leftIco){ mid.appendChild(lineIco(opt.leftIco,21,t.barText,1.9)); }
@@ -1996,14 +2131,16 @@ function topBar(t,opt){
 /* ============================================================
    CHAT
    ============================================================ */
-/* The tail's base is a VERTICAL segment that sits flush on the bubble's edge and
-   laps 2px inside it, so the two shapes merge with no seam. The caller squares off
-   the corner it attaches to — otherwise the rounded corner pulls the fill away and
-   the tail floats. */
+/* iMessage-style hook: it hangs off the BOTTOM corner of the LAST bubble in a run,
+   sweeps out and down, and curls back under. The right edge of the box sits 4px
+   inside the bubble and the caller flattens that bottom corner, so the two shapes
+   merge into one silhouette with no seam. */
 function tailSvg(dir,col){
-  const p = dir==='you' ? 'M10 0 L10 11.6 L0 2.4 Z' : 'M0 0 L0 11.6 L10 2.4 Z';
-  const n=svgTag(10,12,'cv-tail','<path d="'+p+'" fill="'+col+'" stroke="'+col+'" stroke-width="0.9" stroke-linejoin="round"/>');
-  return n;
+  const p = dir==='you'
+    ? 'M13 2.5 C13 9.2 11.1 13.7 6.4 16.2 C5.2 16.8 5.4 17.4 6.7 17.3 L13 17.3 Z'
+    : 'M0 2.5 C0 9.2 1.9 13.7 6.6 16.2 C7.8 16.8 7.6 17.4 6.3 17.3 L0 17.3 Z';
+  return svgTag(13,18,'cv-tail',
+    '<path d="'+p+'" fill="'+col+'" stroke="'+col+'" stroke-width="0.8" stroke-linejoin="round"/>');
 }
 function avatarNode(name,t){
   const a=avatarFor(name);
@@ -2023,10 +2160,10 @@ function renderChatPage(units,opt){
   const L=sh.layer;
   if(S.statusBar) L.appendChild(statusBar(t));
   if(opt.bar!==false){
-    L.appendChild(topBar(t,{
-      title:S.chat.roomName||roomPartner()||'대화',
-      icons:['search','menu']
-    }));
+    const ri = opt.room==null ? S.chat.room : opt.room;
+    const mem = roomMembers(ri);
+    const title = opt.title || S.chat.roomName || roomPartner(ri) || '대화';
+    L.appendChild(topBar(t,{ title:title, n: mem>2?mem:0, icons:['search','menu'] }));
   }
   const body=el('div','pv-body');
   body.style.fontSize=t.fontSize+'px';
@@ -2039,7 +2176,7 @@ function renderChatPage(units,opt){
     d.appendChild(s); body.appendChild(d);
   }
 
-  let lastGi=-1, lastRow=null, lastCol=null;
+  let lastGi=-1, lastRow=null, lastCol=null, lastMeLine=null;
   units.forEach(function(u,idx){
     const mine = u.who===S.chat.me;
     const sameGroup = (u.gi===lastGi) && lastRow && (lastRow.dataset.mine===String(mine));
@@ -2078,25 +2215,35 @@ function renderChatPage(units,opt){
     bub.style.borderRadius = t.radius+'px';
     bub.style.fontSize = (t.fontSize||15)+'px';
     bub.innerHTML = richHTML(u.text);
-    if(t.tail && !sameGroup){
-      /* flatten the corner the tail meets so the bubble edge is vertical there */
-      const flat=Math.min(3,t.radius)+'px';
-      if(mine) bub.style.borderTopRightRadius=flat; else bub.style.borderTopLeftRadius=flat;
-      bub.appendChild(tailSvg(mine?'me':'you', mine?t.meBg:t.youBg));
-    }
     line.appendChild(bub);
 
     const nxt=units[idx+1];
     const isLast = !nxt || nxt.gi!==u.gi || (nxt.who===S.chat.me)!==mine;
+
+    if(t.tail && isLast){
+      /* flatten the corner the tail meets so the bubble edge is straight there */
+      const flat=Math.min(4,t.radius)+'px';
+      if(mine) bub.style.borderBottomRightRadius=flat; else bub.style.borderBottomLeftRadius=flat;
+      bub.appendChild(tailSvg(mine?'me':'you', mine?t.meBg:t.youBg));
+    }
+
     if(isLast){
       const meta=el('div','cv-meta');
       meta.style.color=t.timeCol; meta.style.fontSize=(t.timeSize||10.5)+'px';
-      if(mine && t.showRead){ const r=el('div','cv-read','1'); r.style.color=t.readCol; meta.appendChild(r); }
+      const un=+u.unread||0;
+      if(mine && un>0){ const r=el('div','cv-read',String(un)); r.style.color=t.readCol; meta.appendChild(r); }
       meta.appendChild(el('div',null,u.time||''));
       line.appendChild(meta);
     }
+    if(mine) lastMeLine=line;
     col.appendChild(line);
   });
+
+  if(t.showRead && t.readLabel && lastMeLine && lastMeLine.parentNode){
+    const rl=el('div','cv-readlabel', t.readLabel);
+    rl.style.color=t.timeCol; rl.style.fontSize=Math.max(8,(t.timeSize||10.5)-0.5)+'px';
+    lastMeLine.parentNode.appendChild(rl);
+  }
 
   if(t.showInput){
     const inp=el('div','cv-input');
@@ -2133,6 +2280,12 @@ function paperCss(t){
   if(t.paper==='grid')  return 'repeating-linear-gradient(to bottom, transparent 0 23px, '+rgba(t.subCol,0.13)+' 23px 24px),'+
                                'repeating-linear-gradient(to right, transparent 0 23px, '+rgba(t.subCol,0.13)+' 23px 24px)';
   if(t.paper==='dot')   return 'radial-gradient('+rgba(t.subCol,0.28)+' 1px, transparent 1px)';
+  return '';
+}
+/* the card already prints the first line as the subtitle — don't print it twice */
+function bodyAfterSub(note){
+  const bl=String(note.body||'').split('\n');
+  for(let i=0;i<bl.length;i++){ if(bl[i].trim()!==''){ return bl.slice(i+1).join('\n'); } }
   return '';
 }
 function memoBodyNode(note,t,limit){
@@ -2215,10 +2368,13 @@ function renderMemoHome(notes,opt){
       if(n.tag){ const g2=el('span','mc-tag',n.tag); g2.style.background=t.tagBg; g2.style.color=t.tagText; c.appendChild(g2); }
       const ti=el('div','mc-title rt'); ti.innerHTML=richHTML(n.title)||'제목 없음';
       ti.style.color=t.titleCol; ti.style.fontSize=(t.listTitleSize||15)+'px'; c.appendChild(ti);
+      let rest=n;
       if(n.sub){ const sb=el('div','mc-sub rt'); sb.innerHTML=richHTML(n.sub);
-                 sb.style.color=t.subCol; sb.style.fontSize=(t.subSize||13)+'px'; c.appendChild(sb); }
-      const bd=memoBodyNode(n,t,S.memo.style==='grid'?4:6);
-      bd.style.fontSize=(t.fontSize-2.5)+'px'; bd.style.color=rgba(t.bodyCol,0.78);
+                 sb.style.color=t.subCol; sb.style.fontSize=(t.subSize||13)+'px'; c.appendChild(sb);
+                 rest=Object.assign({},n,{body:bodyAfterSub(n)}); }
+      const bd=memoBodyNode(rest,t,S.memo.style==='grid'?4:6);
+      bd.classList.add('mc-body');
+      bd.style.fontSize=(t.fontSize-2.5)+'px'; bd.style.color=rgba(t.bodyCol,0.88);
       c.appendChild(bd);
       if(picked){ const m=el('div','mv-selmark'); m.style.background=t.accent; m.appendChild(lineIco('check',11,readable(t.accent),3)); c.appendChild(m); }
       host.appendChild(c);
@@ -2256,7 +2412,7 @@ function renderMemoDetail(note,blocksSlice,opt){
   const sh=pvShell(t,opt.minH);
   const L=sh.layer;
   if(S.statusBar) L.appendChild(statusBar(t));
-  L.appendChild(topBar(t,{ title:S.memo.appTitle||'메모', icons:['search','dots'] }));
+  L.appendChild(topBar(t,{ title:S.memo.appTitle||'메모', icons:['search','dots'], backAct:'home' }));
   if(paperCss(t)){ const pp=el('div','mv-paper'); pp.style.background=paperCss(t); pp.style.backgroundSize=t.paper==='dot'?'16px 16px':'auto'; sh.pv.appendChild(pp); }
 
   const body=el('div','pv-body'); L.appendChild(body);
@@ -2427,6 +2583,7 @@ function bindNum(node,get,set,lo,hi){
   on(node,'keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); node.blur(); } });
 }
 function syncInputs(root){ $$('input,textarea',root||document).forEach(n=>{ if(n._sync) n._sync(); }); }
+function syncChoices(root){ $$('[data-choice]',root||document).forEach(n=>{ if(n._sync) n._sync(); }); }
 function raf(fn){ return requestAnimationFrame(fn); }
 
 /* ------------------------------------------------------------
@@ -2824,17 +2981,31 @@ function buildDeck(){
   if(!items.length){ deck.appendChild(emptyState()); return 0; }
 
   if(S.mode==='chat'){
-    const n=clamp(S.pages.chat,1,items.length);
+    /* one page per detected room */
+    if(S.chat.roomMode==='split' && S.chat.rooms.length>1){
+      liveRooms().forEach(function(ri){
+        const sub=items.filter(u=>u.room===ri);
+        if(!sub.length) return;
+        deck.appendChild(pageWrap(
+          renderChatPage(sub,{dateLine:true, room:ri, title:roomPartner(ri)}),
+          roomPartner(ri).slice(0,18), roomPartner(ri).slice(0,14)));
+      });
+      equalizePages(deck);
+      return $$('.page',deck).length;
+    }
+
+    /* cut on sender cells — never inside one person's run of bubbles */
+    const cells=chatCells(items);
+    const n=clamp(S.pages.chat,1,cells.length);
     if(n<=1){
       deck.appendChild(pageWrap(renderChatPage(items,{dateLine:true}),'',''));
     }else{
-      const ids=items.map(u=>u.id);
-      const m=measureUnits(()=>renderChatPage(items,{dateLine:true}),ids);
+      const m=measureUnits(()=>renderChatPage(items,{dateLine:true}), cells.map(c=>c.id));
       const cuts=splitBalanced(m.tops,m.total,n);
-      const ext=m.tops.concat([m.total]);
       cuts.forEach(function(c,i){
+        const a=cells[c[0]].a, b=cells[c[1]-1].b;
         deck.appendChild(pageWrap(
-          renderChatPage(items.slice(c[0],c[1]),{dateLine:i===0}),'',
+          renderChatPage(items.slice(a,b),{dateLine:i===0}),'',
           (i+1)+' / '+cuts.length));
       });
       equalizePages(deck);
@@ -2958,12 +3129,13 @@ function layoutDeck(animate){
 
   pages.forEach(p=>{ p.style.transition=''; p.style.transform=''; p.removeAttribute('data-rel'); p.removeAttribute('data-far'); });
   const n=pages.length;
-  /* show up to 3 boards side by side; beyond that the strip scrolls sideways */
+  /* Fit at most 2 boards, and only if they stay readable. Anything more scrolls
+     sideways rather than shrinking every page into uselessness. */
   let show=1;
-  for(let k=Math.min(n,3);k>=1;k--){
-    if(aw/(k*PV_W+(k-1)*GAP) >= 0.55){ show=k; break; }
+  for(let k=Math.min(n,2);k>=1;k--){
+    if(aw/(k*PV_W+(k-1)*GAP) >= 0.70){ show=k; break; }
   }
-  const s=clamp(Math.min(1, aw/(show*PV_W+(show-1)*GAP)), 0.34, 1);
+  const s=clamp(Math.min(1, aw/(show*PV_W+(show-1)*GAP)), 0.5, 1);
   const dw=n*PV_W+(n-1)*GAP;
   fi.style.width=dw+'px';
   fi.style.transform='scale('+s+')';
@@ -3015,9 +3187,14 @@ function paintStageFoot(n){
   }
   const d=el('div','dots');
   for(let i=0;i<n;i++){
-    const b=el('button','dot'+(i===S.flipIdx&&S.flip?' is-on':''));
+    const b=el('button','dot'+(i===S.flipIdx?' is-on':''));
     b.title=(i+1)+'장';
-    on(b,'click',function(){ if(!S.flip){ S.flip=true; $('#btnFlip').classList.add('is-on'); } flipTo(i); });
+    on(b,'click',function(){
+      if(S.flip){ flipTo(i); return; }
+      const pg=$$('.page',$('#deck'))[i];
+      if(pg&&pg.scrollIntoView) pg.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+      S.flipIdx=i; paintStageFoot(n);
+    });
     d.appendChild(b);
   }
   f.appendChild(d);
@@ -3058,10 +3235,12 @@ function reparse(keepEdits){
 function afterDataChange(rebuildLists){
   paintParseStat();
   paintRoomChips();
+  paintRoomModeHint();
   paintMeSelect();
   paintRangeUI();
   if(rebuildLists) paintEditList();
   paintMemoSelInfo();
+  syncChoices();
   renderAll();
 }
 
@@ -3084,7 +3263,16 @@ function paintRoomChips(){
   const box=$('#roomChips'); if(!box) return;
   box.innerHTML='';
   const rs=S.chat.rooms;
+  const mode=$('[data-choice="roomMode"]');
+  if(mode) mode.parentNode.style.display = rs.length>1||participants().length>2 ? '' : 'none';
   if(rs.length<=1){ box.innerHTML='<span class="hint" style="margin:0">대화방이 하나뿐입니다.</span>'; return; }
+  if(S.chat.roomMode!=='one'){
+    box.innerHTML='<span class="hint" style="margin:0">'+
+      (S.chat.roomMode==='split'
+        ? '대화방 <b>'+rs.length+'개</b>를 각각 한 장씩 내보냅니다.'
+        : '참가자 <b>'+participants().length+'명</b>을 한 단톡방으로 합쳤습니다.')+'</span>';
+    return;
+  }
   rs.forEach(function(r,i){
     const other=r.names.filter(x=>x!==S.chat.me);
     const label=(other.length?other.join(', '):r.names.join(' · '));
@@ -3101,6 +3289,15 @@ function paintRoomChips(){
     });
     box.appendChild(c);
   });
+}
+function paintRoomModeHint(){
+  const h=$('#roomModeHint'); if(!h) return;
+  const rs=S.chat.rooms.length, ps=participants().length;
+  h.innerHTML = S.chat.roomMode==='one'
+      ? '감지된 대화방 <b>'+rs+'개</b> 중 아래에서 고른 방만 그립니다.'
+    : S.chat.roomMode==='split'
+      ? '대화방 <b>'+rs+'개</b>를 각각 한 장씩 그립니다. 장수는 자동입니다.'
+      : '인물 <b>'+ps+'명</b> 전원이 들어간 단톡방 하나로 합쳐 그립니다.';
 }
 function paintMeSelect(){
   const s=$('#meSel'); if(!s) return;
@@ -3155,14 +3352,17 @@ function markRange(){
   });
 }
 function clampPages(){
-  const m=Math.max(1,liveList().length);
+  const m = S.mode==='chat' ? chatMaxPages() : Math.max(1,liveList().length);
   S.pages[S.mode]=clamp(S.pages[S.mode],1,m);
   paintPagesSlider();
 }
 function paintPagesSlider(){
   const m=Math.max(1,liveList().length);
-  const lockMulti = S.mode==='memo' && S.memo.open<0 && S.memo.exportWhat!=='home' && S.memo.sel.length>1;
-  const max = S.mode==='memo' ? (S.memo.open>=0||S.memo.exportWhat!=='home' ? 40 : m) : m;
+  const splitRooms = S.mode==='chat' && S.chat.roomMode==='split' && S.chat.rooms.length>1;
+  const lockMulti = splitRooms ||
+    (S.mode==='memo' && S.memo.open<0 && S.memo.exportWhat!=='home' && S.memo.sel.length>1);
+  const max = S.mode==='chat' ? chatMaxPages()
+            : (S.memo.open>=0||S.memo.exportWhat!=='home' ? 40 : m);
   const v=clamp(S.pages[S.mode],1,max);
   S.pages[S.mode]=v;
   if(!pagesSld || pagesSld._max!==max){
@@ -3178,8 +3378,9 @@ function paintPagesSlider(){
   $('#pagesSld').style.opacity=lockMulti?'.4':'';
   $('#pagesSld').style.pointerEvents=lockMulti?'none':'';
   const h=$('#pagesHint');
-  if(lockMulti) h.textContent='여러 메모를 선택하면 메모 1개당 1장으로 저장됩니다.';
-  else if(S.mode==='chat') h.textContent='말풍선 단위로 잘라 같은 높이의 이미지 '+v+'장을 만듭니다. 최대 '+max+'장까지 나눌 수 있어요.';
+  if(splitRooms) h.textContent='대화방 분리 모드에서는 방 개수만큼 자동으로 나뉩니다 — '+max+'장.';
+  else if(lockMulti) h.textContent='여러 메모를 선택하면 메모 1개당 1장으로 저장됩니다.';
+  else if(S.mode==='chat') h.textContent='보낸 사람 단위(말풍선 묶음)로 잘라 같은 높이의 이미지 '+v+'장을 만듭니다. 최대 '+max+'장.';
   else if(S.memo.open>=0) h.textContent='열어 본 메모의 본문을 '+v+'장으로 나눕니다.';
   else if(S.memo.exportWhat==='home') h.textContent='홈 화면을 메모 단위로 잘라 '+v+'장으로 나눕니다. 최대 '+max+'장.';
   else h.textContent='선택한 메모 1개를 '+v+'장으로 나눕니다.';
@@ -3303,6 +3504,7 @@ function editorNode(u,i,list){
     const b=add('내용',u.text,v=>{u.text=v;},true);
     n.appendChild(fmtBar(b.inp));
     n.appendChild(b.f);
+    if(u.who===S.chat.me) n.appendChild(readField(u));
   }else{
     const row=el('div','inp-row'); row.style.marginBottom='12px';
     const w=add('날짜·시간',u.when,v=>{ u.when=v; const d=memoDate(v); u.mo=d.mo;u.dy=d.dy;u.hh=d.hh;u.mi=d.mi;u.ord=d.ord; }); w.f.style.flex='1';
@@ -3323,6 +3525,41 @@ function editorNode(u,i,list){
   acts.appendChild(up); acts.appendChild(dn); acts.appendChild(done);
   n.appendChild(acts);
   return n;
+}
+
+/* read state lives on the message, not the theme: default read, opt in to unread */
+function readField(u){
+  const f=el('div','field');
+  const lab=el('span','lab'); lab.appendChild(el('span',null,'읽음 상태'));
+  const val=el('span','val'); lab.appendChild(val); f.appendChild(lab);
+
+  const box=el('div','choice');
+  const bRead=el('button','choice-b','읽음'), bUn=el('button','choice-b','읽지 않음');
+  box.appendChild(bRead); box.appendChild(bUn); f.appendChild(box);
+  const step=el('div'); step.style.marginTop='9px'; f.appendChild(step);
+
+  function paint(){
+    const un=+u.unread||0, grp=isGroupRoom(), max=roomMembers()-1;
+    bRead.classList.toggle('is-on',un===0);
+    bUn.classList.toggle('is-on',un>0);
+    val.textContent = un===0 ? '모두 읽음' : (grp ? un+'명 안 읽음' : '안 읽음');
+    step.innerHTML='';
+    if(un>0 && grp){
+      const row=el('div'); row.style.cssText='display:flex;align-items:center;gap:8px';
+      const mk=(txt,d)=>{ const b=el('button','btn sm',txt); b.style.width='38px';
+        on(b,'click',function(){ u.unread=clamp((+u.unread||0)+d,1,max); paint(); renderSoon(); }); return b; };
+      const num=el('div',null,String(un)+' / '+max);
+      num.style.cssText='flex:1;text-align:center;font-size:13px;font-weight:650;font-variant-numeric:tabular-nums';
+      row.appendChild(mk('\u2212',-1)); row.appendChild(num); row.appendChild(mk('+',1));
+      step.appendChild(row);
+      const h=el('p','hint','단톡방 인원 '+roomMembers()+'명 중 아직 읽지 않은 사람 수입니다.');
+      step.appendChild(h);
+    }
+  }
+  on(bRead,'click',function(){ u.unread=0; paint(); renderSoon(); });
+  on(bUn,'click',function(){ if(!(+u.unread)) u.unread=1; paint(); renderSoon(); });
+  paint(); f._sync=paint;
+  return f;
 }
 
 function fmtBar(inp){
@@ -3422,11 +3659,34 @@ function paintThemeGrid(){
   if(!g.children.length) g.innerHTML='<p class="hint">해당 그룹의 테마가 없습니다.</p>';
 }
 
+function paintThemeFold(){
+  const btn=$('#btnThFold'), body=$('#thBody'), folded=$('#thFolded');
+  if(!btn) return;
+  const open=!S.thFold;
+  btn.setAttribute('aria-expanded',String(open));
+  btn.title = open ? '테마 목록 접기' : '테마 목록 펼치기';
+  body.hidden=!open; folded.hidden=open;
+  if(!open){
+    folded.innerHTML='';
+    const cur=findTheme(S.themeId);
+    const chip=themeChip(cur||{id:'',name:'내 색',chat:S.theme.chat,memo:S.theme.memo});
+    chip.classList.remove('is-on');
+    folded.appendChild(chip);
+    const now=el('div','th-now');
+    now.appendChild(el('b',null,(cur&&cur.name)||'직접 만든 색'));
+    now.appendChild(el('span',null,allThemes().length+'개 테마 · 눌러서 펼치기'));
+    folded.appendChild(now);
+    const go=el('button','btn sm','테마 바꾸기');
+    on(go,'click',function(){ S.thFold=false; paintThemeFold(); save(); });
+    folded.appendChild(go);
+  }
+}
+
 function applyTheme(t){
   S.theme.chat=Object.assign(deep(CHAT_DEF),deep(t.chat||{}));
   S.theme.memo=Object.assign(deep(MEMO_DEF),deep(t.memo||{}));
   S.themeId=t.id;
-  paintThemeGrid(); paintThemeEditor(true); renderAll();
+  paintThemeGrid(); paintThemeFold(); paintThemeEditor(true); renderAll();
   toast(t.name+' 테마를 적용했습니다');
 }
 
@@ -3499,6 +3759,15 @@ function sldField(label,get,set,min,max,step,unit){
     onChange:function(v){ val.textContent=fmt(v); set(v); renderAll(); paintThemeGrid(); }});
   val.textContent=fmt(get());
   f._sync=function(){ api.set(get(),true); val.textContent=fmt(get()); };
+  return f;
+}
+function textField(label,get,set,ph){
+  const f=el('div','field');
+  f.appendChild(el('span','lab',label));
+  const i=document.createElement('input'); i.className='inp'; i.placeholder=ph||'';
+  f.appendChild(i);
+  bindText(i,get,function(v){ set(v); renderSoon(); save(); });
+  f._sync=function(){ if(document.activeElement!==i) i.value=get()||''; };
   return f;
 }
 function colField(label,key,againstKey){
@@ -3587,8 +3856,12 @@ function paintThemeEditor(force){
     nm._body.appendChild(sldField('이름 크기',()=>t().nameSize,v=>{t().nameSize=v;},9,20,0.5,'px'));
     nm._body.appendChild(colField('시간 색','timeCol','bg1'));
     nm._body.appendChild(sldField('시간 크기',()=>t().timeSize,v=>{t().timeSize=v;},8,16,0.5,'px'));
-    nm._body.appendChild(swField('읽음 표시','내 메시지 옆에 작은 숫자 1','showRead'));
-    nm._body.appendChild(colField('읽음 색','readCol','bg1'));
+    nm._body.appendChild(swField('읽음 문구 표시','마지막으로 보낸 메시지 아래에 나옵니다','showRead'));
+    nm._body.appendChild(textField('읽음 문구',()=>t().readLabel,v=>{t().readLabel=v;},'예: 읽음 / 전송됨'));
+    nm._body.appendChild(colField('안 읽음 숫자 색','readCol','bg1'));
+    const note=el('p','hint','안 읽음 숫자는 <b>선택·편집</b> 탭에서 메시지별로 지정합니다.');
+    note.innerHTML='안 읽음 숫자는 <b>선택·편집</b> 탭에서 메시지마다 켤 수 있습니다.';
+    nm._body.appendChild(note);
     box.appendChild(nm);
 
     const dt=fold('날짜 · 경고', t().dateBg, false);
@@ -3727,7 +4000,15 @@ const SAMPLE_CHAT=[
 '< 보낸사람 : 아모가싯디 / 발신시간 : 09:33 / 받는사람 : 쿠베라 >','',
 '[……그래]','',
 '< 보낸사람 : 아모가싯디 / 발신시간 : 09:34 / 받는사람 : 쿠베라 >','',
-'[여섯 시]','[사탕 사서 간다]','[**두 봉지**]','[머리 말리라고 해라. 감기 걸려]','[가람아]'
+'[여섯 시]','[사탕 사서 간다]','[**두 봉지**]','[머리 말리라고 해라. 감기 걸려]','[가람아]','',
+'< 보낸사람 : 아모가싯디 / 발신시간 : 18:02 / 받는사람 : 쿠베라, 아미타바 >','',
+'[사탕 샀다]','[**두 봉지**]','[아미타바 니 몫은 없다]','',
+'< 보낸사람 : 아미타바 / 발신시간 : 18:03 / 받는사람 : 아모가싯디, 쿠베라 >','',
+'[왜!!!!!]','[형아 나 오늘 링크도 보내줬잖아]','',
+'< 보낸사람 : 쿠베라 / 발신시간 : 18:04 / 받는사람 : 아모가싯디, 아미타바 >','',
+'[아빠 최고]','[이모 미안]','',
+'< 보낸사람 : 아모가싯디 / 발신시간 : 18:04 / 받는사람 : 쿠베라, 아미타바 >','',
+'[이모 아니다]','[…한 봉지는 나눠 먹어라]'
 ].join('\n');
 
 const SAMPLE_MEMO=[
@@ -3862,6 +4143,14 @@ function wire(){
   bindText($('#roomName'),()=>S.chat.roomName,function(v){ S.chat.roomName=v; renderSoon(); save(); });
   bindText($('#chatDate'),()=>S.chat.dateLine,function(v){ S.chat.dateLine=v; renderSoon(); save(); });
   on($('#meSel'),'change',function(){ S.chat.me=$('#meSel').value; paintRoomChips(); paintEditList(); renderAll(); });
+  bindChoice('roomMode',()=>S.chat.roomMode,function(v){
+    S.chat.roomMode=v;
+    const b=baseList().length;
+    S.range.chat=[1,Math.max(1,b)];
+    S.flipIdx=0;
+    if(v==='split') S.pages.chat=1;
+    afterDataChange(true);
+  });
 
   /* memo options */
   bindText($('#memoTitle'),()=>S.memo.appTitle,function(v){ S.memo.appTitle=v; renderSoon(); save(); });
@@ -3883,6 +4172,13 @@ function wire(){
   on($('#btnSelInv'),'click',function(){ baseList().forEach(u=>u.on=(u.on===false)); paintEditList(); clampPages(); renderAll(); });
 
   /* theme */
+  on($('#btnThFold'),'click',function(){ S.thFold=!S.thFold; paintThemeFold(); save(); });
+  on($('#btnFoldAll'),'click',function(){
+    const folds=$$('#thEditor .fold');
+    const anyOpen=folds.some(f=>f.classList.contains('is-open'));
+    folds.forEach(f=>f.classList.toggle('is-open',!anyOpen));
+    this.textContent=anyOpen?'모두 펼치기':'모두 접기';
+  });
   on($('#btnThSave'),'click',saveCustomTheme);
   on($('#btnThReset'),'click',function(){
     const t=findTheme(S.themeId);
@@ -3955,8 +4251,13 @@ function wire(){
   /* deck interaction */
   const deck=$('#deck');
   on(deck,'click',function(e){
+    if(S.mode!=='memo') return;
+    /* the phone's own back chevron walks out of a memo too */
+    if(e.target.closest('[data-act="home"]')){
+      S.memo.open=-1; paintStageTools(); paintPagesSlider(); renderAll(); return;
+    }
     const card=e.target.closest('[data-note]');
-    if(!card||S.mode!=='memo') return;
+    if(!card) return;
     const id=card.dataset.note;
     if(S.memo.pick){
       const i=S.memo.sel.indexOf(id);
@@ -3991,12 +4292,69 @@ function wire(){
   });
   on($('#btnHelp'),'click',showHelp);
 
+  bindGrips();
+
   /* resize */
   let rt;
-  on(window,'resize',function(){ clearTimeout(rt); rt=setTimeout(function(){ moveSegInd(); layoutDeck(false); },110); });
+  on(window,'resize',function(){ clearTimeout(rt); rt=setTimeout(function(){ moveSegInd(); applyPanes(); layoutDeck(false); },110); });
   on(window,'orientationchange',function(){ setTimeout(function(){ moveSegInd(); layoutDeck(false); },260); });
   on(document,'visibilitychange',function(){ if(!document.hidden) paintSaveStat(); });
   on(window,'beforeunload',function(){ try{ localStorage.setItem(LSK,JSON.stringify(snap())); }catch(e){} });
+}
+
+/* ---------- draggable pane grips ---------- */
+function stacked(){
+  return window.matchMedia('(max-width:1023px)').matches &&
+        !window.matchMedia('(max-width:1023px) and (orientation:landscape) and (min-width:660px)').matches;
+}
+function applyPanes(){
+  document.documentElement.style.setProperty('--panel-w',(S.panelW||428)+'px');
+  const a=$('#stageArea');
+  if(stacked() && S.stageH) a.style.maxHeight=S.stageH+'px';
+  else a.style.removeProperty('max-height');
+}
+function bindGrips(){
+  grip($('#rszX'),'x'); grip($('#rszY'),'y');
+}
+function grip(node,axis){
+  if(!node) return;
+  let start=0, base=0, live=0;
+  on(node,'pointerdown',function(e){
+    node.setPointerCapture&&node.setPointerCapture(e.pointerId);
+    node.classList.add('is-drag');
+    document.body.style.cursor = axis==='x'?'col-resize':'row-resize';
+    if(axis==='x'){ start=e.clientX; base=$('.panel').getBoundingClientRect().width; }
+    else { start=e.clientY; base=$('#stageArea').getBoundingClientRect().height; }
+    live=base; e.preventDefault();
+  });
+  on(node,'pointermove',function(e){
+    if(!node.classList.contains('is-drag')) return;
+    if(axis==='x'){
+      const max=Math.min(720,Math.max(320,window.innerWidth-380));
+      live=clamp(base+(e.clientX-start),300,max);
+      document.documentElement.style.setProperty('--panel-w',Math.round(live)+'px');
+    }else{
+      const max=Math.max(220,window.innerHeight-280);
+      live=clamp(base+(e.clientY-start),170,max);
+      $('#stageArea').style.maxHeight=Math.round(live)+'px';
+    }
+    layoutDeck(false);
+    e.preventDefault();
+  });
+  const end=function(e){
+    if(!node.classList.contains('is-drag')) return;
+    node.classList.remove('is-drag');
+    document.body.style.cursor='';
+    try{ node.releasePointerCapture&&node.releasePointerCapture(e.pointerId); }catch(_){}
+    if(axis==='x') S.panelW=Math.round(live); else S.stageH=Math.round(live);
+    layoutDeck(false); save();
+  };
+  on(node,'pointerup',end); on(node,'pointercancel',end); on(node,'lostpointercapture',end);
+  on(node,'dblclick',function(){
+    if(axis==='x'){ S.panelW=428; } else { S.stageH=0; }
+    applyPanes(); layoutDeck(false); save();
+    toast('기본 크기로 되돌렸습니다');
+  });
 }
 
 function paintFileHint(){
@@ -4055,6 +4413,7 @@ function boot(reload){
     if(!had) applyTheme(THEMES[0]);
   }
   applyUiTheme();                       /* after load(), so a saved light/dark choice sticks */
+  applyPanes();
   $('#btnStatusBar').classList.toggle('is-on',S.statusBar);
   $('#btnFlip').classList.toggle('is-on',S.flip);
   $('#raw').value=curRaw();
@@ -4062,6 +4421,7 @@ function boot(reload){
   paintFileHint();
   paintSaveStat();
   paintThemeGrid();
+  paintThemeFold();
   paintThemeEditor(true);
   syncInputs();
   setTab('input');

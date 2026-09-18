@@ -182,6 +182,23 @@ html[data-ui="dark"] .sld-bub{color:#15171B}
 .fmt.i{font-style:italic;font-family:Georgia,serif}
 .fmt.s{text-decoration:line-through}
 
+/* ---- collapsible section header ---- */
+.sec-fold{
+  display:flex;align-items:center;gap:5px;padding:2px 4px 2px 0;margin-left:-2px;border-radius:7px;
+  transition:background .16s;
+}
+.sec-fold:hover{background:var(--surface-2)}
+.sec-fold .chev{display:flex;color:var(--text-4);transition:transform .24s cubic-bezier(.22,1,.36,1)}
+.sec-fold .chev svg{width:13px;height:13px}
+.sec-fold[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.th-folded{display:flex;align-items:center;gap:11px;padding:4px 0 2px}
+.th-folded .th{width:46px;height:46px;flex:0 0 auto;aspect-ratio:auto}
+.th-folded .th-name{display:none}
+.th-folded .th-now{flex:1 1 auto;min-width:0}
+.th-folded .th-now b{display:block;font-size:13.5px;font-weight:650;letter-spacing:-.015em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.th-folded .th-now span{display:block;font-size:11.5px;color:var(--text-3);margin-top:1px}
+
 /* ============================================================
    8. MISC
    ============================================================ */

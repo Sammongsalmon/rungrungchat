@@ -35,14 +35,17 @@ function markRange(){
   });
 }
 function clampPages(){
-  const m=Math.max(1,liveList().length);
+  const m = S.mode==='chat' ? chatMaxPages() : Math.max(1,liveList().length);
   S.pages[S.mode]=clamp(S.pages[S.mode],1,m);
   paintPagesSlider();
 }
 function paintPagesSlider(){
   const m=Math.max(1,liveList().length);
-  const lockMulti = S.mode==='memo' && S.memo.open<0 && S.memo.exportWhat!=='home' && S.memo.sel.length>1;
-  const max = S.mode==='memo' ? (S.memo.open>=0||S.memo.exportWhat!=='home' ? 40 : m) : m;
+  const splitRooms = S.mode==='chat' && S.chat.roomMode==='split' && S.chat.rooms.length>1;
+  const lockMulti = splitRooms ||
+    (S.mode==='memo' && S.memo.open<0 && S.memo.exportWhat!=='home' && S.memo.sel.length>1);
+  const max = S.mode==='chat' ? chatMaxPages()
+            : (S.memo.open>=0||S.memo.exportWhat!=='home' ? 40 : m);
   const v=clamp(S.pages[S.mode],1,max);
   S.pages[S.mode]=v;
   if(!pagesSld || pagesSld._max!==max){
@@ -58,8 +61,9 @@ function paintPagesSlider(){
   $('#pagesSld').style.opacity=lockMulti?'.4':'';
   $('#pagesSld').style.pointerEvents=lockMulti?'none':'';
   const h=$('#pagesHint');
-  if(lockMulti) h.textContent='여러 메모를 선택하면 메모 1개당 1장으로 저장됩니다.';
-  else if(S.mode==='chat') h.textContent='말풍선 단위로 잘라 같은 높이의 이미지 '+v+'장을 만듭니다. 최대 '+max+'장까지 나눌 수 있어요.';
+  if(splitRooms) h.textContent='대화방 분리 모드에서는 방 개수만큼 자동으로 나뉩니다 — '+max+'장.';
+  else if(lockMulti) h.textContent='여러 메모를 선택하면 메모 1개당 1장으로 저장됩니다.';
+  else if(S.mode==='chat') h.textContent='보낸 사람 단위(말풍선 묶음)로 잘라 같은 높이의 이미지 '+v+'장을 만듭니다. 최대 '+max+'장.';
   else if(S.memo.open>=0) h.textContent='열어 본 메모의 본문을 '+v+'장으로 나눕니다.';
   else if(S.memo.exportWhat==='home') h.textContent='홈 화면을 메모 단위로 잘라 '+v+'장으로 나눕니다. 최대 '+max+'장.';
   else h.textContent='선택한 메모 1개를 '+v+'장으로 나눕니다.';
@@ -183,6 +187,7 @@ function editorNode(u,i,list){
     const b=add('내용',u.text,v=>{u.text=v;},true);
     n.appendChild(fmtBar(b.inp));
     n.appendChild(b.f);
+    if(u.who===S.chat.me) n.appendChild(readField(u));
   }else{
     const row=el('div','inp-row'); row.style.marginBottom='12px';
     const w=add('날짜·시간',u.when,v=>{ u.when=v; const d=memoDate(v); u.mo=d.mo;u.dy=d.dy;u.hh=d.hh;u.mi=d.mi;u.ord=d.ord; }); w.f.style.flex='1';
@@ -203,6 +208,41 @@ function editorNode(u,i,list){
   acts.appendChild(up); acts.appendChild(dn); acts.appendChild(done);
   n.appendChild(acts);
   return n;
+}
+
+/* read state lives on the message, not the theme: default read, opt in to unread */
+function readField(u){
+  const f=el('div','field');
+  const lab=el('span','lab'); lab.appendChild(el('span',null,'읽음 상태'));
+  const val=el('span','val'); lab.appendChild(val); f.appendChild(lab);
+
+  const box=el('div','choice');
+  const bRead=el('button','choice-b','읽음'), bUn=el('button','choice-b','읽지 않음');
+  box.appendChild(bRead); box.appendChild(bUn); f.appendChild(box);
+  const step=el('div'); step.style.marginTop='9px'; f.appendChild(step);
+
+  function paint(){
+    const un=+u.unread||0, grp=isGroupRoom(), max=roomMembers()-1;
+    bRead.classList.toggle('is-on',un===0);
+    bUn.classList.toggle('is-on',un>0);
+    val.textContent = un===0 ? '모두 읽음' : (grp ? un+'명 안 읽음' : '안 읽음');
+    step.innerHTML='';
+    if(un>0 && grp){
+      const row=el('div'); row.style.cssText='display:flex;align-items:center;gap:8px';
+      const mk=(txt,d)=>{ const b=el('button','btn sm',txt); b.style.width='38px';
+        on(b,'click',function(){ u.unread=clamp((+u.unread||0)+d,1,max); paint(); renderSoon(); }); return b; };
+      const num=el('div',null,String(un)+' / '+max);
+      num.style.cssText='flex:1;text-align:center;font-size:13px;font-weight:650;font-variant-numeric:tabular-nums';
+      row.appendChild(mk('\u2212',-1)); row.appendChild(num); row.appendChild(mk('+',1));
+      step.appendChild(row);
+      const h=el('p','hint','단톡방 인원 '+roomMembers()+'명 중 아직 읽지 않은 사람 수입니다.');
+      step.appendChild(h);
+    }
+  }
+  on(bRead,'click',function(){ u.unread=0; paint(); renderSoon(); });
+  on(bUn,'click',function(){ if(!(+u.unread)) u.unread=1; paint(); renderSoon(); });
+  paint(); f._sync=paint;
+  return f;
 }
 
 function fmtBar(inp){

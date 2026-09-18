@@ -54,6 +54,12 @@ function bracketSegs(block){
 const CHAT_HEAD=/^\s*<\s*보낸\s*사람\s*[:：]?\s*([\s\S]*?)\s*\/\s*발신\s*시간\s*[:：]?\s*([\s\S]*?)\s*\/\s*받는\s*사람\s*[:：]?\s*([\s\S]*?)\s*>\s*$/;
 const CHAT_HEAD_LOOSE=/^\s*<\s*([^<>\/]+?)\s*\/\s*([0-9]{1,2}\s*[:：]\s*[0-9]{2}(?:\s*[APap][Mm])?|오전[^\/]*|오후[^\/]*)\s*\/\s*([^<>]+?)\s*>\s*$/;
 
+/* "쿠베라, 아미타바" / "쿠베라 및 아미타바" -> ['쿠베라','아미타바'] */
+function splitNames(v){
+  return String(v||'').split(/\s*[,،、;]\s*|\s+및\s+|\s+와\s+|\s+과\s+|\s+and\s+/i)
+    .map(x=>x.trim()).filter(Boolean);
+}
+
 function parseChat(src){
   const text=stripNoise(src);
   const lines=text.split('\n');
@@ -78,7 +84,7 @@ function parseChat(src){
       let to=m[3].trim(), mis='';
       const mm=/^([\s\S]*?)\s*[（(]\s*(?:본래|원래|실제)?\s*보내려\s*한?\s*사람\s*[:：]?\s*([\s\S]*?)\s*[）)]\s*$/.exec(to);
       if(mm){ to=mm[1].trim(); mis=mm[2].trim(); }
-      cur={ who:m[1].trim(), time:m[2].trim(), to:to, mis:mis };
+      cur={ who:m[1].trim(), time:m[2].trim(), to:to, tos:splitNames(to), mis:mis };
       continue;
     }
     if(cur) buf.push(L);
@@ -88,14 +94,22 @@ function parseChat(src){
   /* ---- flatten to units + build rooms ---- */
   const units=[], roomMap={}, rooms=[], seen={};
   groups.forEach(function(g,gi){
-    const key=[g.who,g.to].slice().sort().join('\u0000');
-    if(roomMap[key]==null){ roomMap[key]=rooms.length; rooms.push({key:key,names:[g.who,g.to],n:0}); }
+    /* a room is the whole set of people in the header, so 1:1 and group chats
+       both fall out of the same rule */
+    const all=[g.who].concat(g.tos.length?g.tos:[g.to]);
+    const uniq=[]; all.forEach(function(n){ if(n && uniq.indexOf(n)<0) uniq.push(n); });
+    const key=uniq.slice().sort().join('\u0001');
+    if(roomMap[key]==null){
+      roomMap[key]=rooms.length;
+      rooms.push({key:key, names:uniq.slice(), n:0, group:uniq.length>2});
+    }
     const ri=roomMap[key];
     rooms[ri].n+=g.msgs.length;
-    seen[g.who]=(seen[g.who]||0)+1; seen[g.to]=(seen[g.to]||0)+1;
+    uniq.forEach(function(n){ seen[n]=(seen[n]||0)+1; });
     g.msgs.forEach(function(t,bi){
-      units.push({ id:'c'+gi+'_'+bi, gi:gi, room:ri, who:g.who, time:g.time, to:g.to,
-                   mis:bi===0?g.mis:'', text:t, on:true });
+      units.push({ id:'c'+gi+'_'+bi, gi:gi, room:ri, who:g.who, time:g.time,
+                   to:g.to, tos:g.tos.slice(),
+                   mis:bi===0?g.mis:'', text:t, unread:0, on:true });
     });
   });
 

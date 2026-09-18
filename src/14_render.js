@@ -57,7 +57,9 @@ function topBar(t,opt){
   const n=el('div','pv-top'+(opt.center?' center':''));
   n.style.background=t.barBg; n.style.color=t.barText;
   if(opt.back!==false){
-    const b=el('div','tb-back'); b.appendChild(lineIco('left',22,t.barText,2)); n.appendChild(b);
+    const b=el('div','tb-back'); b.appendChild(lineIco('left',22,t.barText,2));
+    if(opt.backAct){ b.dataset.act=opt.backAct; b.style.cursor='pointer'; b.title='홈으로'; }
+    n.appendChild(b);
   }
   const mid=el('div','tb-mid');
   if(opt.leftIco){ mid.appendChild(lineIco(opt.leftIco,21,t.barText,1.9)); }
@@ -78,14 +80,16 @@ function topBar(t,opt){
 /* ============================================================
    CHAT
    ============================================================ */
-/* The tail's base is a VERTICAL segment that sits flush on the bubble's edge and
-   laps 2px inside it, so the two shapes merge with no seam. The caller squares off
-   the corner it attaches to — otherwise the rounded corner pulls the fill away and
-   the tail floats. */
+/* iMessage-style hook: it hangs off the BOTTOM corner of the LAST bubble in a run,
+   sweeps out and down, and curls back under. The right edge of the box sits 4px
+   inside the bubble and the caller flattens that bottom corner, so the two shapes
+   merge into one silhouette with no seam. */
 function tailSvg(dir,col){
-  const p = dir==='you' ? 'M10 0 L10 11.6 L0 2.4 Z' : 'M0 0 L0 11.6 L10 2.4 Z';
-  const n=svgTag(10,12,'cv-tail','<path d="'+p+'" fill="'+col+'" stroke="'+col+'" stroke-width="0.9" stroke-linejoin="round"/>');
-  return n;
+  const p = dir==='you'
+    ? 'M13 2.5 C13 9.2 11.1 13.7 6.4 16.2 C5.2 16.8 5.4 17.4 6.7 17.3 L13 17.3 Z'
+    : 'M0 2.5 C0 9.2 1.9 13.7 6.6 16.2 C7.8 16.8 7.6 17.4 6.3 17.3 L0 17.3 Z';
+  return svgTag(13,18,'cv-tail',
+    '<path d="'+p+'" fill="'+col+'" stroke="'+col+'" stroke-width="0.8" stroke-linejoin="round"/>');
 }
 function avatarNode(name,t){
   const a=avatarFor(name);
@@ -105,10 +109,10 @@ function renderChatPage(units,opt){
   const L=sh.layer;
   if(S.statusBar) L.appendChild(statusBar(t));
   if(opt.bar!==false){
-    L.appendChild(topBar(t,{
-      title:S.chat.roomName||roomPartner()||'대화',
-      icons:['search','menu']
-    }));
+    const ri = opt.room==null ? S.chat.room : opt.room;
+    const mem = roomMembers(ri);
+    const title = opt.title || S.chat.roomName || roomPartner(ri) || '대화';
+    L.appendChild(topBar(t,{ title:title, n: mem>2?mem:0, icons:['search','menu'] }));
   }
   const body=el('div','pv-body');
   body.style.fontSize=t.fontSize+'px';
@@ -121,7 +125,7 @@ function renderChatPage(units,opt){
     d.appendChild(s); body.appendChild(d);
   }
 
-  let lastGi=-1, lastRow=null, lastCol=null;
+  let lastGi=-1, lastRow=null, lastCol=null, lastMeLine=null;
   units.forEach(function(u,idx){
     const mine = u.who===S.chat.me;
     const sameGroup = (u.gi===lastGi) && lastRow && (lastRow.dataset.mine===String(mine));
@@ -160,25 +164,35 @@ function renderChatPage(units,opt){
     bub.style.borderRadius = t.radius+'px';
     bub.style.fontSize = (t.fontSize||15)+'px';
     bub.innerHTML = richHTML(u.text);
-    if(t.tail && !sameGroup){
-      /* flatten the corner the tail meets so the bubble edge is vertical there */
-      const flat=Math.min(3,t.radius)+'px';
-      if(mine) bub.style.borderTopRightRadius=flat; else bub.style.borderTopLeftRadius=flat;
-      bub.appendChild(tailSvg(mine?'me':'you', mine?t.meBg:t.youBg));
-    }
     line.appendChild(bub);
 
     const nxt=units[idx+1];
     const isLast = !nxt || nxt.gi!==u.gi || (nxt.who===S.chat.me)!==mine;
+
+    if(t.tail && isLast){
+      /* flatten the corner the tail meets so the bubble edge is straight there */
+      const flat=Math.min(4,t.radius)+'px';
+      if(mine) bub.style.borderBottomRightRadius=flat; else bub.style.borderBottomLeftRadius=flat;
+      bub.appendChild(tailSvg(mine?'me':'you', mine?t.meBg:t.youBg));
+    }
+
     if(isLast){
       const meta=el('div','cv-meta');
       meta.style.color=t.timeCol; meta.style.fontSize=(t.timeSize||10.5)+'px';
-      if(mine && t.showRead){ const r=el('div','cv-read','1'); r.style.color=t.readCol; meta.appendChild(r); }
+      const un=+u.unread||0;
+      if(mine && un>0){ const r=el('div','cv-read',String(un)); r.style.color=t.readCol; meta.appendChild(r); }
       meta.appendChild(el('div',null,u.time||''));
       line.appendChild(meta);
     }
+    if(mine) lastMeLine=line;
     col.appendChild(line);
   });
+
+  if(t.showRead && t.readLabel && lastMeLine && lastMeLine.parentNode){
+    const rl=el('div','cv-readlabel', t.readLabel);
+    rl.style.color=t.timeCol; rl.style.fontSize=Math.max(8,(t.timeSize||10.5)-0.5)+'px';
+    lastMeLine.parentNode.appendChild(rl);
+  }
 
   if(t.showInput){
     const inp=el('div','cv-input');
@@ -215,6 +229,12 @@ function paperCss(t){
   if(t.paper==='grid')  return 'repeating-linear-gradient(to bottom, transparent 0 23px, '+rgba(t.subCol,0.13)+' 23px 24px),'+
                                'repeating-linear-gradient(to right, transparent 0 23px, '+rgba(t.subCol,0.13)+' 23px 24px)';
   if(t.paper==='dot')   return 'radial-gradient('+rgba(t.subCol,0.28)+' 1px, transparent 1px)';
+  return '';
+}
+/* the card already prints the first line as the subtitle — don't print it twice */
+function bodyAfterSub(note){
+  const bl=String(note.body||'').split('\n');
+  for(let i=0;i<bl.length;i++){ if(bl[i].trim()!==''){ return bl.slice(i+1).join('\n'); } }
   return '';
 }
 function memoBodyNode(note,t,limit){
@@ -297,10 +317,13 @@ function renderMemoHome(notes,opt){
       if(n.tag){ const g2=el('span','mc-tag',n.tag); g2.style.background=t.tagBg; g2.style.color=t.tagText; c.appendChild(g2); }
       const ti=el('div','mc-title rt'); ti.innerHTML=richHTML(n.title)||'제목 없음';
       ti.style.color=t.titleCol; ti.style.fontSize=(t.listTitleSize||15)+'px'; c.appendChild(ti);
+      let rest=n;
       if(n.sub){ const sb=el('div','mc-sub rt'); sb.innerHTML=richHTML(n.sub);
-                 sb.style.color=t.subCol; sb.style.fontSize=(t.subSize||13)+'px'; c.appendChild(sb); }
-      const bd=memoBodyNode(n,t,S.memo.style==='grid'?4:6);
-      bd.style.fontSize=(t.fontSize-2.5)+'px'; bd.style.color=rgba(t.bodyCol,0.78);
+                 sb.style.color=t.subCol; sb.style.fontSize=(t.subSize||13)+'px'; c.appendChild(sb);
+                 rest=Object.assign({},n,{body:bodyAfterSub(n)}); }
+      const bd=memoBodyNode(rest,t,S.memo.style==='grid'?4:6);
+      bd.classList.add('mc-body');
+      bd.style.fontSize=(t.fontSize-2.5)+'px'; bd.style.color=rgba(t.bodyCol,0.88);
       c.appendChild(bd);
       if(picked){ const m=el('div','mv-selmark'); m.style.background=t.accent; m.appendChild(lineIco('check',11,readable(t.accent),3)); c.appendChild(m); }
       host.appendChild(c);
@@ -338,7 +361,7 @@ function renderMemoDetail(note,blocksSlice,opt){
   const sh=pvShell(t,opt.minH);
   const L=sh.layer;
   if(S.statusBar) L.appendChild(statusBar(t));
-  L.appendChild(topBar(t,{ title:S.memo.appTitle||'메모', icons:['search','dots'] }));
+  L.appendChild(topBar(t,{ title:S.memo.appTitle||'메모', icons:['search','dots'], backAct:'home' }));
   if(paperCss(t)){ const pp=el('div','mv-paper'); pp.style.background=paperCss(t); pp.style.backgroundSize=t.paper==='dot'?'16px 16px':'auto'; sh.pv.appendChild(pp); }
 
   const body=el('div','pv-body'); L.appendChild(body);

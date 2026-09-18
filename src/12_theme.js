@@ -10,7 +10,8 @@ const CHAT_DEF={
   misBg:'#E0453A', misText:'#FFFFFF',
   radius:16, fontSize:15, nameSize:12.5, timeSize:10.5, barSize:16.5,
   tail:true, avatar:true, avatarR:14, avatarSize:38,
-  showInput:true, inputBg:'#FFFFFF', showHome:true, statusDark:true, showRead:true, readCol:'#F5C400'
+  showInput:true, inputBg:'#FFFFFF', showHome:true, statusDark:true,
+  showRead:true, readLabel:'읽음', readCol:'#F5C400'
 };
 const MEMO_DEF={
   bgType:'solid', bg1:'#FFFFFF', bg2:'#F2F2F7', bgAngle:160, bgImg:'', bgDim:0,
@@ -53,13 +54,13 @@ function themeFromPalette(id,name,pal,opt){
   const bg   = dark ? s[0] : s[3];
   /* fitFill can drag a bubble back toward the wallpaper — separate again afterwards */
   const you  = separate(fitFill(dark ? mix(s[1],'#FFFFFF',0.06) : mix(s[3],'#FFFFFF',0.82), 7.2), bg, 1.16);
-  const me   = separate(fitFill(acc===bg?mix(acc,dark?'#FFFFFF':'#000000',0.18):acc, 5.6), bg, 1.22);
+  const me   = separate(fitFill(acc===bg?mix(acc,dark?'#FFFFFF':'#000000',0.18):acc, 4.85), bg, 1.22);
   const bar  = dark ? mix(s[0],s[1],0.62) : mix(s[3],'#FFFFFF',0.52);
   const ink  = dark ? '#F2F4F7' : '#16181C';
   const chat={
     bgType:'solid', bg1:bg, bg2:dark?mix(s[0],'#000000',0.35):mix(s[3],s[2],0.35), bgAngle:160, bgImg:'', bgDim:0,
     barBg:fitFill(bar,6.2), barText:ensure(dark?ink:s[0],fitFill(bar,6.2),6), barLine:!dark,
-    meBg:me,  meText:ensure(readable(me),me,5.5),
+    meBg:me,  meText:ensure(readable(me),me,4.6),
     youBg:you, youText:ensure(readable(you),you,7),
     nameCol:ensure(dark?mix(ink,bg,0.25):mix(s[0],bg,0.12),bg,3.6),
     timeCol:ensure(mix(readable(bg),bg,0.42),bg,2.6),
@@ -68,21 +69,38 @@ function themeFromPalette(id,name,pal,opt){
     radius:opt.radius||16, fontSize:15, nameSize:12.5, timeSize:10.5, barSize:16.5,
     tail:opt.tail!==false, avatar:true, avatarR:14, avatarSize:38,
     showInput:true, inputBg: dark?mix(bg,'#FFFFFF',0.09):mix(bar,'#FFFFFF',0.6),
-    showHome:true, statusDark:!dark, showRead:true, readCol:ensure(acc,bg,2.4)
+    showHome:true, statusDark:!dark, showRead:true, readLabel:'읽음', readCol:ensure(acc,bg,2.4)
   };
   chat.dateText=ensure(readable(chat.dateBg),chat.dateBg,5);
   chat.misText=ensure(readable(chat.misBg),chat.misBg,5);
 
   /* ---------- memo ---------- */
-  const mbg  = dark ? mix(s[0],'#000000',0.25) : mix(s[3],'#FFFFFF',0.62);
-  const card = fitFill(dark ? mix(s[0],'#FFFFFF',0.075) : separate(mix(s[3],'#FFFFFF',0.9),mbg,1.1), 9);
+  /* Light memo themes read as dead when the page is white and the card is greyed to
+     separate from it. Tint the PAGE with a mid palette colour and keep the card the
+     lightest thing on screen instead. */
+  let mbg, card;
+  if(dark){
+    mbg  = mix(s[0],'#000000',0.25);
+    card = fitFill(mix(s[0],'#FFFFFF',0.075), 9);
+  }else{
+    /* tint from the most colourful mid-tone, not just the palest swatch */
+    let tint=s[2];
+    if(chroma(s[1])>chroma(tint)*1.2) tint=s[1];
+    if(chroma(s[3])>chroma(tint)*1.2) tint=s[3];
+    mbg = mix(tint,'#FFFFFF',0.46);
+    let g=0; while(lum(mbg)<0.70 && g++<18) mbg=mix(mbg,'#FFFFFF',0.11);
+    card = mix(s[3],'#FFFFFF',0.84);
+    let guard=0;
+    while(lum(card)-lum(mbg)<0.09 && guard++<20) card=mix(card,'#FFFFFF',0.2);
+    card = fitFill(card, 9);
+  }
   const mtitle=ensure(dark?'#F4F6F8':s[0],card,9);
   const memo={
     bgType:'solid', bg1:mbg, bg2:dark?mix(s[0],'#000000',0.5):mix(s[3],'#FFFFFF',0.3), bgAngle:160, bgImg:'', bgDim:0,
     barBg:fitFill(mbg,7.2), barText:ensure(mtitle,fitFill(mbg,7.2),7), barLine:true,
     cardBg:card, titleCol:ensure(mtitle,card,6.4), bodyCol:ensure(mix(mtitle,card,0.22),card,4.8),
     subCol:ensure(mix(mtitle,card,0.46),card,3.3),
-    accent:ensure(acc,card,2.4), tagBg:fitFill(mix(card,acc,dark?0.26:0.18),5.2), tagText:'',
+    accent:ensure(acc,card,2.6), tagBg:fitFill(mix(card,acc,dark?0.3:0.26),5.2), tagText:'',
     radius:14, fontSize:15, titleSize:22, listTitleSize:15.5, subSize:12.5, bigSize:31, barSize:16.5,
     paper:'none', statusDark:!dark, showSearch:true, showHome:true
   };
@@ -91,10 +109,11 @@ function themeFromPalette(id,name,pal,opt){
   return { id:id, name:name, pal:pal.slice(), chat:chat, memo:memo };
 }
 
-function monoTheme(id,name,h){
+function monoTheme(id,name,h,sat,lit){
+  const acc=fromHsl(h, sat==null?0.86:sat, lit==null?0.52:lit);
   return themeFromPalette(id,name,[
-    fromHsl(h,0.52,0.24), fromHsl(h,0.64,0.47), fromHsl(h,0.55,0.76), fromHsl(h,0.52,0.955)
-  ],{accent:fromHsl(h,0.64,0.47)});
+    fromHsl(h,0.50,0.21), acc, fromHsl(h,0.70,0.80), fromHsl(h,0.72,0.955)
+  ],{accent:acc});
 }
 
 /* ---- hand-tuned signature themes ---- */
@@ -159,10 +178,20 @@ const SHOT_PAL=[
  ['peri','페리윙클',    ['#8B90E8','#AEC2FF','#CFDBFF','#ECF1FF']],
  ['rosewood','로즈우드',['#5A4544','#825A5B','#9E7676','#FCF8EF']],
  ['sage','세이지 톤',   ['#3B4F46','#4E6C54','#AA8B55','#F4E9C9']],
- ['blush','블러시',     ['#890D2F','#EE6984','#F9C8C4','#FEF5E4']]
+ ['blush','블러시',     ['#890D2F','#EE6984','#F9C8C4','#FEF5E4']],
+ ['popneon','네온 팝',   ['#5003C1','#AC02A9','#FE467A','#FFD51E']],
+ ['tropic','트로피컬',   ['#1DCED8','#54E07D','#FF9E51','#FFF9D7']],
+ ['lime','라임 그로브',  ['#2B7C13','#75C459','#F7E8C1','#FFF8CE']],
+ ['citrus','시트러스',   ['#208DAE','#31B8D5','#FED758','#FCE49A']],
+ ['grape','자몽 소다',   ['#722F99','#FF9393','#FCE7CC','#F7F2EC']],
+ ['melon','워터멜론',    ['#00B8AA','#F6416C','#FFDE7D','#F8F3D5']],
+ ['bloom','블룸',        ['#FF2E63','#FF7BA9','#FFD5E5','#FFF6FA']],
+ ['aqua','아쿠아 팝',    ['#0057B8','#00A8E8','#7DE2FC','#EAFBFF']]
 ];
-const MONO=[['red','빨강',2],['orange','주황',26],['yellow','노랑',45],['green','초록',140],
-            ['blue','파랑',211],['navy','남색',242],['violet','보라',283]];
+/* hue, saturation, lightness tuned per colour — a yellow at mid lightness turns olive */
+const MONO=[['red','빨강',4,0.82,0.55],['orange','주황',27,0.94,0.55],['yellow','노랑',48,0.97,0.56],
+            ['green','초록',142,0.66,0.43],['blue','파랑',211,0.86,0.50],
+            ['navy','남색',244,0.70,0.55],['violet','보라',285,0.66,0.55]];
 
 function buildThemes(){
   const out=[];
@@ -173,7 +202,7 @@ function buildThemes(){
     t.pal=h.pal.slice(); t.grp='기본';
     out.push(t);
   });
-  MONO.forEach(function(m){ const t=monoTheme('mono-'+m[0],m[1],m[2]); t.grp='단색'; out.push(t); });
+  MONO.forEach(function(m){ const t=monoTheme('mono-'+m[0],m[1],m[2],m[3],m[4]); t.grp='단색'; out.push(t); });
   SHOT_PAL.forEach(function(p){ const t=themeFromPalette('sh-'+p[0],p[1],p[2],{}); t.grp='팔레트'; out.push(t); });
   out.forEach(function(t){
     t.chat=Object.assign({},CHAT_DEF,t.chat);

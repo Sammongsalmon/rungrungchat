@@ -32,17 +32,31 @@ function buildDeck(){
   if(!items.length){ deck.appendChild(emptyState()); return 0; }
 
   if(S.mode==='chat'){
-    const n=clamp(S.pages.chat,1,items.length);
+    /* one page per detected room */
+    if(S.chat.roomMode==='split' && S.chat.rooms.length>1){
+      liveRooms().forEach(function(ri){
+        const sub=items.filter(u=>u.room===ri);
+        if(!sub.length) return;
+        deck.appendChild(pageWrap(
+          renderChatPage(sub,{dateLine:true, room:ri, title:roomPartner(ri)}),
+          roomPartner(ri).slice(0,18), roomPartner(ri).slice(0,14)));
+      });
+      equalizePages(deck);
+      return $$('.page',deck).length;
+    }
+
+    /* cut on sender cells — never inside one person's run of bubbles */
+    const cells=chatCells(items);
+    const n=clamp(S.pages.chat,1,cells.length);
     if(n<=1){
       deck.appendChild(pageWrap(renderChatPage(items,{dateLine:true}),'',''));
     }else{
-      const ids=items.map(u=>u.id);
-      const m=measureUnits(()=>renderChatPage(items,{dateLine:true}),ids);
+      const m=measureUnits(()=>renderChatPage(items,{dateLine:true}), cells.map(c=>c.id));
       const cuts=splitBalanced(m.tops,m.total,n);
-      const ext=m.tops.concat([m.total]);
       cuts.forEach(function(c,i){
+        const a=cells[c[0]].a, b=cells[c[1]-1].b;
         deck.appendChild(pageWrap(
-          renderChatPage(items.slice(c[0],c[1]),{dateLine:i===0}),'',
+          renderChatPage(items.slice(a,b),{dateLine:i===0}),'',
           (i+1)+' / '+cuts.length));
       });
       equalizePages(deck);
@@ -166,12 +180,13 @@ function layoutDeck(animate){
 
   pages.forEach(p=>{ p.style.transition=''; p.style.transform=''; p.removeAttribute('data-rel'); p.removeAttribute('data-far'); });
   const n=pages.length;
-  /* show up to 3 boards side by side; beyond that the strip scrolls sideways */
+  /* Fit at most 2 boards, and only if they stay readable. Anything more scrolls
+     sideways rather than shrinking every page into uselessness. */
   let show=1;
-  for(let k=Math.min(n,3);k>=1;k--){
-    if(aw/(k*PV_W+(k-1)*GAP) >= 0.55){ show=k; break; }
+  for(let k=Math.min(n,2);k>=1;k--){
+    if(aw/(k*PV_W+(k-1)*GAP) >= 0.70){ show=k; break; }
   }
-  const s=clamp(Math.min(1, aw/(show*PV_W+(show-1)*GAP)), 0.34, 1);
+  const s=clamp(Math.min(1, aw/(show*PV_W+(show-1)*GAP)), 0.5, 1);
   const dw=n*PV_W+(n-1)*GAP;
   fi.style.width=dw+'px';
   fi.style.transform='scale('+s+')';
@@ -223,9 +238,14 @@ function paintStageFoot(n){
   }
   const d=el('div','dots');
   for(let i=0;i<n;i++){
-    const b=el('button','dot'+(i===S.flipIdx&&S.flip?' is-on':''));
+    const b=el('button','dot'+(i===S.flipIdx?' is-on':''));
     b.title=(i+1)+'장';
-    on(b,'click',function(){ if(!S.flip){ S.flip=true; $('#btnFlip').classList.add('is-on'); } flipTo(i); });
+    on(b,'click',function(){
+      if(S.flip){ flipTo(i); return; }
+      const pg=$$('.page',$('#deck'))[i];
+      if(pg&&pg.scrollIntoView) pg.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+      S.flipIdx=i; paintStageFoot(n);
+    });
     d.appendChild(b);
   }
   f.appendChild(d);
@@ -266,10 +286,12 @@ function reparse(keepEdits){
 function afterDataChange(rebuildLists){
   paintParseStat();
   paintRoomChips();
+  paintRoomModeHint();
   paintMeSelect();
   paintRangeUI();
   if(rebuildLists) paintEditList();
   paintMemoSelInfo();
+  syncChoices();
   renderAll();
 }
 
@@ -292,7 +314,16 @@ function paintRoomChips(){
   const box=$('#roomChips'); if(!box) return;
   box.innerHTML='';
   const rs=S.chat.rooms;
+  const mode=$('[data-choice="roomMode"]');
+  if(mode) mode.parentNode.style.display = rs.length>1||participants().length>2 ? '' : 'none';
   if(rs.length<=1){ box.innerHTML='<span class="hint" style="margin:0">대화방이 하나뿐입니다.</span>'; return; }
+  if(S.chat.roomMode!=='one'){
+    box.innerHTML='<span class="hint" style="margin:0">'+
+      (S.chat.roomMode==='split'
+        ? '대화방 <b>'+rs.length+'개</b>를 각각 한 장씩 내보냅니다.'
+        : '참가자 <b>'+participants().length+'명</b>을 한 단톡방으로 합쳤습니다.')+'</span>';
+    return;
+  }
   rs.forEach(function(r,i){
     const other=r.names.filter(x=>x!==S.chat.me);
     const label=(other.length?other.join(', '):r.names.join(' · '));
@@ -309,6 +340,15 @@ function paintRoomChips(){
     });
     box.appendChild(c);
   });
+}
+function paintRoomModeHint(){
+  const h=$('#roomModeHint'); if(!h) return;
+  const rs=S.chat.rooms.length, ps=participants().length;
+  h.innerHTML = S.chat.roomMode==='one'
+      ? '감지된 대화방 <b>'+rs+'개</b> 중 아래에서 고른 방만 그립니다.'
+    : S.chat.roomMode==='split'
+      ? '대화방 <b>'+rs+'개</b>를 각각 한 장씩 그립니다. 장수는 자동입니다.'
+      : '인물 <b>'+ps+'명</b> 전원이 들어간 단톡방 하나로 합쳐 그립니다.';
 }
 function paintMeSelect(){
   const s=$('#meSel'); if(!s) return;

@@ -73,11 +73,34 @@ function paintThemeGrid(){
   if(!g.children.length) g.innerHTML='<p class="hint">해당 그룹의 테마가 없습니다.</p>';
 }
 
+function paintThemeFold(){
+  const btn=$('#btnThFold'), body=$('#thBody'), folded=$('#thFolded');
+  if(!btn) return;
+  const open=!S.thFold;
+  btn.setAttribute('aria-expanded',String(open));
+  btn.title = open ? '테마 목록 접기' : '테마 목록 펼치기';
+  body.hidden=!open; folded.hidden=open;
+  if(!open){
+    folded.innerHTML='';
+    const cur=findTheme(S.themeId);
+    const chip=themeChip(cur||{id:'',name:'내 색',chat:S.theme.chat,memo:S.theme.memo});
+    chip.classList.remove('is-on');
+    folded.appendChild(chip);
+    const now=el('div','th-now');
+    now.appendChild(el('b',null,(cur&&cur.name)||'직접 만든 색'));
+    now.appendChild(el('span',null,allThemes().length+'개 테마 · 눌러서 펼치기'));
+    folded.appendChild(now);
+    const go=el('button','btn sm','테마 바꾸기');
+    on(go,'click',function(){ S.thFold=false; paintThemeFold(); save(); });
+    folded.appendChild(go);
+  }
+}
+
 function applyTheme(t){
   S.theme.chat=Object.assign(deep(CHAT_DEF),deep(t.chat||{}));
   S.theme.memo=Object.assign(deep(MEMO_DEF),deep(t.memo||{}));
   S.themeId=t.id;
-  paintThemeGrid(); paintThemeEditor(true); renderAll();
+  paintThemeGrid(); paintThemeFold(); paintThemeEditor(true); renderAll();
   toast(t.name+' 테마를 적용했습니다');
 }
 
@@ -150,6 +173,15 @@ function sldField(label,get,set,min,max,step,unit){
     onChange:function(v){ val.textContent=fmt(v); set(v); renderAll(); paintThemeGrid(); }});
   val.textContent=fmt(get());
   f._sync=function(){ api.set(get(),true); val.textContent=fmt(get()); };
+  return f;
+}
+function textField(label,get,set,ph){
+  const f=el('div','field');
+  f.appendChild(el('span','lab',label));
+  const i=document.createElement('input'); i.className='inp'; i.placeholder=ph||'';
+  f.appendChild(i);
+  bindText(i,get,function(v){ set(v); renderSoon(); save(); });
+  f._sync=function(){ if(document.activeElement!==i) i.value=get()||''; };
   return f;
 }
 function colField(label,key,againstKey){
@@ -238,8 +270,12 @@ function paintThemeEditor(force){
     nm._body.appendChild(sldField('이름 크기',()=>t().nameSize,v=>{t().nameSize=v;},9,20,0.5,'px'));
     nm._body.appendChild(colField('시간 색','timeCol','bg1'));
     nm._body.appendChild(sldField('시간 크기',()=>t().timeSize,v=>{t().timeSize=v;},8,16,0.5,'px'));
-    nm._body.appendChild(swField('읽음 표시','내 메시지 옆에 작은 숫자 1','showRead'));
-    nm._body.appendChild(colField('읽음 색','readCol','bg1'));
+    nm._body.appendChild(swField('읽음 문구 표시','마지막으로 보낸 메시지 아래에 나옵니다','showRead'));
+    nm._body.appendChild(textField('읽음 문구',()=>t().readLabel,v=>{t().readLabel=v;},'예: 읽음 / 전송됨'));
+    nm._body.appendChild(colField('안 읽음 숫자 색','readCol','bg1'));
+    const note=el('p','hint','안 읽음 숫자는 <b>선택·편집</b> 탭에서 메시지별로 지정합니다.');
+    note.innerHTML='안 읽음 숫자는 <b>선택·편집</b> 탭에서 메시지마다 켤 수 있습니다.';
+    nm._body.appendChild(note);
     box.appendChild(nm);
 
     const dt=fold('날짜 · 경고', t().dateBg, false);

@@ -69,9 +69,11 @@
   word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap;
   min-width:0;max-width:100%;
 }
-.cv-tail{position:absolute;top:0;width:10px;height:12px;overflow:visible}
-.cv-row.you .cv-tail{left:-7px}
-.cv-row.me .cv-tail{right:-7px}
+.cv-tail{position:absolute;bottom:0;width:13px;height:18px;overflow:visible}
+.cv-row.you .cv-tail{left:-9px}
+.cv-row.me .cv-tail{right:-9px}
+.cv-readlabel{align-self:flex-end;margin:0 3px 2px;font-weight:600;letter-spacing:-.01em}
+.cv-row.you .cv-readlabel{align-self:flex-start}
 .cv-meta{
   flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;
   font-size:10.5px;line-height:1.3;font-weight:500;letter-spacing:-.01em;

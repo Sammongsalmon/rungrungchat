@@ -148,6 +148,7 @@ function bindNum(node,get,set,lo,hi){
   on(node,'keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); node.blur(); } });
 }
 function syncInputs(root){ $$('input,textarea',root||document).forEach(n=>{ if(n._sync) n._sync(); }); }
+function syncChoices(root){ $$('[data-choice]',root||document).forEach(n=>{ if(n._sync) n._sync(); }); }
 function raf(fn){ return requestAnimationFrame(fn); }
 
 /* ------------------------------------------------------------

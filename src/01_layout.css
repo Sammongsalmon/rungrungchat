@@ -69,6 +69,16 @@ html[data-ui="dark"] .seg-ind{background:var(--surface-3)}
   position:relative;
 }
 
+/* ---- drag-to-resize grips ---- */
+.rsz{position:absolute;z-index:32;display:none;touch-action:none;user-select:none;-webkit-user-select:none}
+.rsz i{position:absolute;display:block;background:var(--line);border-radius:99px;transition:background .16s,transform .16s}
+.rsz:hover i,.rsz.is-drag i{background:var(--accent);transform:scale(1.05)}
+.rsz-x{left:-6px;top:0;bottom:0;width:12px;cursor:col-resize}
+.rsz-x i{left:4.5px;top:50%;width:3px;height:46px;margin-top:-23px}
+.rsz-y{left:0;right:0;bottom:-7px;height:15px;cursor:row-resize}
+.rsz-y i{top:6px;left:50%;width:48px;height:3px;margin-left:-24px}
+@media (min-width:1024px){ .rsz-x{display:block} }
+
 /* ============================================================
    2. STAGE (preview)
    ============================================================ */
@@ -89,7 +99,7 @@ html[data-ui="dark"] .seg-ind{background:var(--surface-3)}
 .stage-area{
   flex:1 1 auto;min-height:0;overflow:auto;
   padding:4px 28px 34px;
-  display:flex;align-items:flex-start;justify-content:center;
+  display:flex;align-items:flex-start;
   scrollbar-gutter:stable;
   overscroll-behavior-x:contain;
 }
@@ -97,7 +107,7 @@ html[data-ui="dark"] .seg-ind{background:var(--surface-3)}
 
 .deck{
   position:relative;display:flex;gap:26px;align-items:flex-start;
-  justify-content:center;flex-wrap:wrap;
+  justify-content:flex-start;flex-wrap:nowrap;
   transition:opacity .2s;
 }
 .deck.is-flip{
