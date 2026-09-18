@@ -78,9 +78,13 @@ function topBar(t,opt){
 /* ============================================================
    CHAT
    ============================================================ */
+/* The tail's base is a VERTICAL segment that sits flush on the bubble's edge and
+   laps 2px inside it, so the two shapes merge with no seam. The caller squares off
+   the corner it attaches to — otherwise the rounded corner pulls the fill away and
+   the tail floats. */
 function tailSvg(dir,col){
-  const p = dir==='you' ? 'M9 0 L0 4.4 L9 9.8 Z' : 'M0 0 L9 4.4 L0 9.8 Z';
-  const n=svgTag(9,14,'cv-tail','<path d="'+p+'" fill="'+col+'" stroke="'+col+'" stroke-width="1.4" stroke-linejoin="round"/>');
+  const p = dir==='you' ? 'M10 0 L10 11.6 L0 2.4 Z' : 'M0 0 L0 11.6 L10 2.4 Z';
+  const n=svgTag(10,12,'cv-tail','<path d="'+p+'" fill="'+col+'" stroke="'+col+'" stroke-width="0.9" stroke-linejoin="round"/>');
   return n;
 }
 function avatarNode(name,t){
@@ -156,7 +160,12 @@ function renderChatPage(units,opt){
     bub.style.borderRadius = t.radius+'px';
     bub.style.fontSize = (t.fontSize||15)+'px';
     bub.innerHTML = richHTML(u.text);
-    if(t.tail && !sameGroup) bub.appendChild(tailSvg(mine?'me':'you', mine?t.meBg:t.youBg));
+    if(t.tail && !sameGroup){
+      /* flatten the corner the tail meets so the bubble edge is vertical there */
+      const flat=Math.min(3,t.radius)+'px';
+      if(mine) bub.style.borderTopRightRadius=flat; else bub.style.borderTopLeftRadius=flat;
+      bub.appendChild(tailSvg(mine?'me':'you', mine?t.meBg:t.youBg));
+    }
     line.appendChild(bub);
 
     const nxt=units[idx+1];
