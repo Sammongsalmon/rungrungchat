@@ -1,0 +1,39 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# configure-pages 가 Pages 를 켜고, deploy-pages 가 올린다
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 배포는 겹치지 않게, 진행 중인 건 끊지 않는다
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pages 켜기 · 설정
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      # 배포되는 건 루트의 index.html 하나. src/ 는 편집용 원본이라 함께 올려도 무해하다.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
