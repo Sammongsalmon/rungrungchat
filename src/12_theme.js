@@ -46,6 +46,29 @@ function fitFill(c,minTxt){
   return x;
 }
 
+/* A memo accent that is merely darkened until it clears a contrast ratio comes out
+   dusty. Lift the saturation first and keep it, then hunt for the lightness that
+   clears the ratio — the colour stays lively instead of going muddy. */
+function vivid(c,dark){
+  const x=hx(c)||'#888888';
+  if(chroma(x)<0.045) return x;            /* achromatic accents stay achromatic */
+  const H=hsl(x);
+  const s=clamp(H[1]*1.30+(H[1]<0.25?0.14:0.10),0,1);
+  const l=dark ? clamp(Math.max(H[2],0.58),0,0.80)
+               : clamp(Math.min(Math.max(H[2],0.45),0.62),0,1);
+  return fromHsl(H[0],s,l);
+}
+function vividOn(c,bg,min,dark){
+  const v=vivid(c,dark);
+  if(contrast(v,bg)>=min) return v;
+  const H=hsl(v), down=lum(bg)>0.5;
+  for(let i=1;i<=28;i++){
+    const t=fromHsl(H[0],H[1],down?H[2]-i*0.025:H[2]+i*0.025);
+    if(contrast(t,bg)>=min) return t;
+  }
+  return ensure(v,bg,min);                  /* last resort: the plain pole walk */
+}
+
 /* The gradient's second stop is derived, never hand-picked: take the wallpaper,
    breathe a little of the theme's accent into it, step the lightness away from the
    middle, then pull it back until the two ends read as one surface rather than two
@@ -103,8 +126,8 @@ function themeFromPalette(id,name,pal,opt){
     let tint=s[2];
     if(chroma(s[1])>chroma(tint)*1.2) tint=s[1];
     if(chroma(s[3])>chroma(tint)*1.2) tint=s[3];
-    mbg = mix(tint,'#FFFFFF',0.46);
-    let g=0; while(lum(mbg)<0.70 && g++<18) mbg=mix(mbg,'#FFFFFF',0.11);
+    mbg = mix(tint,'#FFFFFF',0.52);
+    let g=0; while(lum(mbg)<0.80 && g++<24) mbg=mix(mbg,'#FFFFFF',0.11);
     card = mix(s[3],'#FFFFFF',0.84);
     let guard=0;
     while(lum(card)-lum(mbg)<0.09 && guard++<20) card=mix(card,'#FFFFFF',0.2);
@@ -116,7 +139,7 @@ function themeFromPalette(id,name,pal,opt){
     barBg:fitFill(mbg,7.2), barText:ensure(mtitle,fitFill(mbg,7.2),7), barLine:true,
     cardBg:card, titleCol:ensure(mtitle,card,6.4), bodyCol:ensure(mix(mtitle,card,0.22),card,4.8),
     subCol:ensure(mix(mtitle,card,0.46),card,3.3),
-    accent:ensure(acc,card,2.6), tagBg:fitFill(mix(card,acc,dark?0.3:0.26),5.2), tagText:'',
+    accent:vividOn(acc,card,2.6,dark), tagBg:fitFill(mix(card,vivid(acc,dark),dark?0.32:0.30),5.2), tagText:'',
     radius:14, fontSize:15, titleSize:22, listTitleSize:15.5, subSize:12.5, bigSize:31, barSize:16.5,
     paper:'none', statusDark:!dark, showSearch:true, showHome:true
   };
@@ -264,8 +287,8 @@ function mixerTheme(m){
     mbg  = mix(bg,'#000000',0.22);
     card = mix(bg,'#FFFFFF',0.085);
   }else{
-    mbg = mix(chrom,'#FFFFFF',0.46);
-    let g=0; while(lum(mbg)<0.70 && g++<18) mbg=mix(mbg,'#FFFFFF',0.11);
+    mbg = mix(chrom,'#FFFFFF',0.52);
+    let g=0; while(lum(mbg)<0.80 && g++<24) mbg=mix(mbg,'#FFFFFF',0.11);
     card = mix(W,'#FFFFFF',0.55);
   }
   /* settle the card FIRST so text sits on it, THEN separate it from the page —
@@ -278,8 +301,8 @@ function mixerTheme(m){
     mbg = mix(mbg, lum(card)>0.5 ? '#000000' : '#FFFFFF', 0.05);
   }
   const mtitle=ensure(dark?'#F4F6F8':K, card, 6.4);
-  const macc=ensure(bestAccent(card, null, act), card, 2.6);
-  const tagBg=fitFill(mix(card,macc,dark?0.3:0.26),5.2);
+  const macc=vividOn(bestAccent(card, null, act), card, 2.6, dark);
+  const tagBg=fitFill(mix(card,macc,dark?0.32:0.30),5.2);
   const memo={
     bgType:'solid', bg1:mbg, bg2:autoGrad(mbg,macc,dark), bg2auto:true, bgAngle:160, bgImg:'', bgDim:0,
     barBg:fitFill(mbg,7.2), barText:ensure(mtitle,fitFill(mbg,7.2),7), barLine:true,
@@ -302,8 +325,8 @@ const HAND=[
     misBg:'#D64F45', misText:'#FFFFFF', radius:14, tail:true, avatarR:14,
     inputBg:'#FFFFFF', statusDark:true, readCol:'#F0B800' },
   memo:{ bg1:'#F6F6F8', bg2:'#ECEDF0', barBg:'#FFFFFF', barText:'#191919', cardBg:'#FFFFFF',
-    titleCol:'#191919', bodyCol:'#3F4348', subCol:'#71767C', accent:'#9A7500',
-    tagBg:'#FFF4CC', tagText:'#7A5A00', radius:14, statusDark:true } },
+    titleCol:'#191919', bodyCol:'#3F4348', subCol:'#71767C', accent:'#DE8D00',
+    tagBg:'#FFEFB8', tagText:'#7A5A00', radius:14, statusDark:true } },
 
 { id:'imessage', name:'iMessage', pal:['#0A6FE0','#E9E9EB','#FFFFFF','#8E8E93'],
   chat:{ bg1:'#FFFFFF', bg2:'#F2F2F7', barBg:'#F8F8F9', barText:'#000000', barLine:true,
@@ -312,8 +335,8 @@ const HAND=[
     misBg:'#FF3B30', misText:'#FFFFFF', radius:20, tail:true, avatarR:99,
     inputBg:'#FFFFFF', statusDark:true, showRead:false, readCol:'#8E8E93' },
   memo:{ bg1:'#FFFFFF', bg2:'#F2F2F7', barBg:'#FFFFFF', barText:'#000000', cardBg:'#F7F7FA',
-    titleCol:'#000000', bodyCol:'#3C3C43', subCol:'#75757A', accent:'#C48A10',
-    tagBg:'#FDF1D6', tagText:'#8A6100', radius:14, statusDark:true } },
+    titleCol:'#000000', bodyCol:'#3C3C43', subCol:'#75757A', accent:'#D68800',
+    tagBg:'#FDEBC4', tagText:'#8A6100', radius:14, statusDark:true } },
 
 { id:'dark', name:'다크', pal:['#0B0D10','#22262E','#3B5BFD','#E8EAED'],
   chat:{ bg1:'#0B0D10', bg2:'#05070A', barBg:'#15181D', barText:'#E8EAED', barLine:false,
@@ -322,8 +345,8 @@ const HAND=[
     misBg:'#FF5F52', misText:'#1B0F0E', radius:17, tail:true, avatarR:14,
     inputBg:'#1B1F26', statusDark:false, readCol:'#7B93FF' },
   memo:{ bg1:'#0B0D10', bg2:'#05070A', barBg:'#0B0D10', barText:'#EDEFF2', cardBg:'#181B21',
-    titleCol:'#F2F4F7', bodyCol:'#C3C9D2', subCol:'#8B93A0', accent:'#F5C542',
-    tagBg:'#2B2718', tagText:'#F0C954', radius:14, statusDark:false } },
+    titleCol:'#F2F4F7', bodyCol:'#C3C9D2', subCol:'#8B93A0', accent:'#FFD24A',
+    tagBg:'#332C17', tagText:'#FFD766', radius:14, statusDark:false } },
 
 { id:'light', name:'라이트', pal:['#FFFFFF','#F1F2F4','#17181C','#9AA1AB'],
   chat:{ bg1:'#F4F5F7', bg2:'#EAECEF', barBg:'#FFFFFF', barText:'#15171B', barLine:true,
