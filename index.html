@@ -3566,9 +3566,16 @@ function inlineTree(src,dst){
   }
 }
 
+/* Measure the LAYOUT box, never getBoundingClientRect(): #fitInner carries a
+   transform:scale() to fit the stage, and that scale lands in the rect. Every
+   descendant, meanwhile, is pinned to its getComputedStyle() width — which the
+   transform does not touch. Handing the scaled width to the clone root makes the
+   tree short by that much, flex-shrink pushes the shortfall into the tightest text
+   boxes so they re-wrap, and .page{overflow:hidden} clips the right edge. */
 function nodeToSvg(node){
   const r=node.getBoundingClientRect();
-  const w=Math.max(1,Math.round(r.width)), h=Math.max(1,Math.round(r.height));
+  const w=Math.max(1,Math.round(node.offsetWidth||r.width));
+  const h=Math.max(1,Math.round(node.offsetHeight||r.height));
   const clone=node.cloneNode(true);
   inlineTree(node,clone);
   clone.style.margin='0'; clone.style.transform='none'; clone.style.boxShadow='none';
