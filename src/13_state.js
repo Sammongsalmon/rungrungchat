@@ -19,7 +19,8 @@ const S={
   scale:2,
   fileName:{chat:'',memo:''},
   flip:false, flipIdx:0, statusBar:true, statusTime:'11:34',
-  panelW:428, stageH:0, thFold:false,
+  panelW:428, stageH:0, thFold:false, mixFold:false, thFilter:'기본',
+  mixer:null,
   _dirty:0
 };
 
@@ -31,7 +32,8 @@ function snap(){
     memo:S.memo, range:S.range, theme:S.theme, themeId:S.themeId, custom:S.custom,
     avatars:S.avatars, pages:S.pages, scale:S.scale, fileName:S.fileName,
     statusBar:S.statusBar, statusTime:S.statusTime,
-    panelW:S.panelW, stageH:S.stageH, thFold:S.thFold, at:Date.now()
+    panelW:S.panelW, stageH:S.stageH, thFold:S.thFold, mixFold:S.mixFold, thFilter:S.thFilter,
+    mixer:S.mixer, at:Date.now()
   };
 }
 let lastSave=0, saveFail=false;
@@ -68,7 +70,8 @@ function load(){
     S.fileName=Object.assign({chat:'',memo:''},d.fileName);
     S.statusBar=d.statusBar!==false;
     S.statusTime=d.statusTime||'11:34';
-    S.panelW=d.panelW||428; S.stageH=d.stageH||0; S.thFold=!!d.thFold;
+    S.panelW=d.panelW||428; S.stageH=d.stageH||0; S.thFold=!!d.thFold; S.mixFold=!!d.mixFold;
+    S.thFilter=d.thFilter||'기본'; S.mixer=d.mixer||null;
     lastSave=d.at||0;
     return !!(S.raw.chat||S.raw.memo);
   }catch(e){ return false; }

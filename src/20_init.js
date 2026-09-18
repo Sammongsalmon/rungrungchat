@@ -37,7 +37,7 @@ function applyMode(){
   paintStageTools();
   _thKey='';
   reparseIfNeeded();
-  paintThemeGrid(); paintThemeEditor(true);
+  paintThemeGrid(); paintMixer(); paintThemeEditor(true);
   syncInputs();
   afterDataChange(true);
 }
@@ -167,6 +167,10 @@ function wire(){
 
   /* theme */
   on($('#btnThFold'),'click',function(){ S.thFold=!S.thFold; paintThemeFold(); save(); });
+  on($('#btnMixFold'),'click',function(){ S.mixFold=!S.mixFold; paintMixer(); save(); });
+  on($('#btnMixReset'),'click',function(){
+    S.mixer=deep(MIX_DEF); applyMixer(); paintMixer(); toast('색 조합을 기본값으로 되돌렸습니다');
+  });
   on($('#btnFoldAll'),'click',function(){
     const folds=$$('#thEditor .fold');
     const anyOpen=folds.some(f=>f.classList.contains('is-open'));
@@ -420,6 +424,7 @@ function boot(reload){
   paintSaveStat();
   paintThemeGrid();
   paintThemeFold();
+  paintMixer();
   paintThemeEditor(true);
   syncInputs();
   setTab('input');

@@ -116,6 +116,167 @@ function monoTheme(id,name,h,sat,lit){
   ],{accent:acc});
 }
 
+/* ============================================================
+   COLOUR MIXER
+   Pick 1–3 colours; the mixer shuffles which colour plays which ROLE rather than
+   inventing new colours, so your picks never disappear. Every derived value still
+   goes through ensure()/fitFill()/separate(), so no shuffle can land on a
+   combination you cannot read.
+   ============================================================ */
+const MIX_DEF={ c1:'#FFD400', c2:'#2B2B2B', c3:'#E62D20',
+  on2:true, on3:true, white:true, black:true, tint:true, paperMix:78, order:null };
+
+function mixRoleKeys(m){
+  const k=['c1'];
+  if(m.on2!==false && m.c2) k.push('c2');
+  if(m.on3!==false && m.c3) k.push('c3');
+  if(m.white!==false) k.push('white');
+  if(m.black!==false) k.push('black');
+  return k;
+}
+function mixRoleColor(k,m){
+  if(k==='c1') return hx(m.c1)||'#FFD400';
+  if(k==='c2') return hx(m.c2)||hx(m.c1)||'#2B2B2B';
+  if(k==='c3') return hx(m.c3)||hx(m.c2)||hx(m.c1)||'#E62D20';
+  if(k==='white') return '#FFFFFF';
+  if(k==='black') return '#111111';
+  return null;
+}
+/* drop roles that got switched off, append ones that got switched on, kill dupes */
+function mixOrder(m){
+  const en=mixRoleKeys(m);
+  const saved=Array.isArray(m.order)?m.order:[];
+  const out=saved.filter(function(r,i){ return en.indexOf(r)>=0 && saved.indexOf(r)===i; });
+  en.forEach(function(r){ if(out.indexOf(r)<0) out.push(r); });
+  return out;
+}
+function mixColors(m){
+  const out=[];
+  mixOrder(m).forEach(function(k){
+    const c=mixRoleColor(k,m);
+    if(c && !out.some(function(x){return x.toUpperCase()===c.toUpperCase();})) out.push(c);
+  });
+  if(!out.length) out.push(hx(m.c1)||'#FFD400');
+  return out;
+}
+/* Fisher–Yates, retried until the order actually changes — a shuffle button that
+   sometimes does nothing reads as broken */
+function shuffleMix(m,rnd){
+  rnd=rnd||Math.random;
+  const keys=mixRoleKeys(m);
+  if(keys.length<2) return null;
+  const prev=mixOrder(m).join('|');
+  const sh=keys.slice();
+  for(let a=0;a<12;a++){
+    for(let i=sh.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); const t=sh[i]; sh[i]=sh[j]; sh[j]=t; }
+    if(sh.join('|')!==prev) break;
+  }
+  return sh;
+}
+/* the most legible highlight on this background; give up rather than ship a faint one */
+function bestAccent(bg,base,cands){
+  let best=null,bs=-1;
+  cands.forEach(function(c){
+    if(base && c.toUpperCase()===String(base).toUpperCase()) return;
+    const sc=contrast(c,bg);
+    if(sc>bs){ bs=sc; best=c; }
+  });
+  if(best && bs<3 && base) return base;
+  return best||cands[0]||'#111111';
+}
+/* A fill has two jobs at once: stand apart from what is behind it, AND be extreme
+   enough that black or white text sits on it legibly. Nudging for one can undo the
+   other, so settle both together and take whichever direction gets there first. */
+function settleFill(c,bg,minSep,minTxt,prefer){
+  const ok=function(x){
+    return contrast(x,bg)>=minSep &&
+           Math.max(contrast(x,'#FFFFFF'),contrast(x,'#0A0B0D'))>=minTxt;
+  };
+  const base=hx(c)||'#888888';
+  if(ok(base)) return base;
+  const dirs = prefer==='light' ? ['#FFFFFF'] : prefer==='dark' ? ['#0A0B0D'] : ['#FFFFFF','#0A0B0D'];
+  let best=null, bestSteps=999;
+  dirs.forEach(function(dir){
+    let x=base;
+    for(let i=1;i<=48;i++){
+      x=mix(x,dir,0.05);
+      if(ok(x)){ if(i<bestSteps){ bestSteps=i; best=x; } break; }
+    }
+  });
+  return best || (lum(bg)>0.5 ? '#0A0B0D' : '#FFFFFF');
+}
+function byLum(a,dir){ return a.slice().sort(function(x,y){ return dir*(lum(x)-lum(y)); })[0]; }
+
+function mixerTheme(m){
+  m=Object.assign({},MIX_DEF,m||{});
+  const act=mixColors(m), n=act.length;
+  const A=act[0], B=act[1%n], C=act[2%n];
+  const W = m.white!==false ? '#FFFFFF' : byLum(act,-1);
+  const K = m.black!==false ? '#111111' : byLum(act,1);
+  const tint = m.tint!==false;
+  const pm = clamp((m.paperMix==null?78:m.paperMix)/100, 0, 0.94);
+
+  /* ---------- chat ---------- */
+  const bg   = tint ? mix(B,W,pm) : B;
+  const dark = lum(bg)<0.42;
+  const me   = settleFill(A, bg, 1.22, 4.85, null);
+  const you  = settleFill(dark ? mix(bg,W,0.16) : mix(bg,W,0.86), bg, 1.16, 7.2, 'light');
+  const bar  = fitFill(dark ? mix(bg,W,0.11) : mix(bg,W,0.55), 6.2);
+  const dchip= fitFill(dark ? mix(bg,W,0.15) : mix(bg,K,0.28), 4.6);
+  const misB = fitFill(C,5.2);
+  const chat={
+    bgType:'solid', bg1:bg, bg2:tint?mix(B,W,clamp(pm-0.2,0,0.9)):mix(B,K,0.25),
+    bgAngle:160, bgImg:'', bgDim:0,
+    barBg:bar, barText:ensure(readable(bar),bar,6), barLine:!dark,
+    meBg:me,  meText:ensure(readable(me),me,4.6),
+    youBg:you, youText:ensure(readable(you),you,7),
+    nameCol:ensure(dark?mix(W,bg,0.28):mix(K,bg,0.10),bg,3.4),
+    timeCol:ensure(mix(readable(bg),bg,0.42),bg,2.6),
+    dateBg:dchip, dateText:ensure(readable(dchip),dchip,5),
+    misBg:misB, misText:ensure(readable(misB),misB,5),
+    radius:16, fontSize:15, nameSize:12.5, timeSize:10.5, barSize:16.5,
+    tail:true, avatar:true, avatarR:14, avatarSize:38,
+    showInput:true, inputBg: dark?mix(bg,W,0.10):mix(bar,W,0.6),
+    showHome:true, statusDark:!dark, showRead:true, readLabel:'읽음',
+    readCol:ensure(bestAccent(bg, null, act), bg, 2.6)
+  };
+
+  /* ---------- memo ---------- */
+  const chrom=act.slice().sort(function(x,y){ return chroma(y)-chroma(x); })[0];
+  let mbg, card;
+  if(dark){
+    mbg  = mix(bg,'#000000',0.22);
+    card = mix(bg,'#FFFFFF',0.085);
+  }else{
+    mbg = mix(chrom,'#FFFFFF',0.46);
+    let g=0; while(lum(mbg)<0.70 && g++<18) mbg=mix(mbg,'#FFFFFF',0.11);
+    card = mix(W,'#FFFFFF',0.55);
+  }
+  /* settle the card FIRST so text sits on it, THEN separate it from the page —
+     the other order lets fitFill drag the card back into the page it just left */
+  card = fitFill(card, 9);
+  let g2=0;
+  while(contrast(card,mbg)<1.10 && g2++<90){
+    if(!dark && lum(card)<0.93){ card=mix(card,'#FFFFFF',0.07); continue; }
+    /* push the page away from whichever side the card is on: monotonic, always converges */
+    mbg = mix(mbg, lum(card)>0.5 ? '#000000' : '#FFFFFF', 0.05);
+  }
+  const mtitle=ensure(dark?'#F4F6F8':K, card, 6.4);
+  const macc=ensure(bestAccent(card, null, act), card, 2.6);
+  const tagBg=fitFill(mix(card,macc,dark?0.3:0.26),5.2);
+  const memo={
+    bgType:'solid', bg1:mbg, bg2:mix(mbg,dark?'#000000':'#FFFFFF',0.3), bgAngle:160, bgImg:'', bgDim:0,
+    barBg:fitFill(mbg,7.2), barText:ensure(mtitle,fitFill(mbg,7.2),7), barLine:true,
+    cardBg:card, titleCol:mtitle, bodyCol:ensure(mix(mtitle,card,0.22),card,4.8),
+    subCol:ensure(mix(mtitle,card,0.46),card,3.3),
+    accent:macc, tagBg:tagBg, tagText:ensure(readable(tagBg),tagBg,4.6),
+    radius:14, fontSize:15, titleSize:22, listTitleSize:15.5, subSize:12.5, bigSize:31, barSize:16.5,
+    paper:'none', statusDark:!dark, showSearch:true, showHome:true
+  };
+
+  return { chat:Object.assign(deep(CHAT_DEF),chat), memo:Object.assign(deep(MEMO_DEF),memo) };
+}
+
 /* ---- hand-tuned signature themes ---- */
 const HAND=[
 { id:'kakao', name:'카카오톡', pal:['#B2C7D9','#FEE500','#FFFFFF','#3A4750'],

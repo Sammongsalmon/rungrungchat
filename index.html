@@ -642,6 +642,13 @@ html[data-ui="dark"] .sld-bub{color:#15171B}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .th-folded .th-now span{display:block;font-size:11.5px;color:var(--text-3);margin-top:1px}
 
+/* colour mixer */
+.mix-strip{display:flex;gap:10px;margin:12px 0 10px;flex-wrap:wrap}
+.mix-role{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:46px}
+.mix-sw{width:34px;height:34px;border-radius:10px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+.mix-lab{font-size:11px;font-weight:650;color:var(--text-3);letter-spacing:-.01em}
+#mixUI .col-row .chip{min-height:30px;padding:5px 10px;font-size:12px}
+
 /* ============================================================
    8. MISC
    ============================================================ */
@@ -1140,6 +1147,16 @@ html[data-ui="dark"] .toast{color:#15171B}
             <input type="file" id="thFile" accept=".json,.rrtheme,application/json" hidden>
           </div>
 
+          <div class="sec">
+            <div class="sec-h">
+              <button class="sec-fold" id="btnMixFold" aria-expanded="true" title="색 섞기 접기">
+                <span class="chev" data-ico="chev"></span><span class="sec-t">색 직접 고르기</span>
+              </button>
+              <div class="sec-x"><button class="btn sm ghost" id="btnMixReset">되돌리기</button></div>
+            </div>
+            <div id="mixUI"></div>
+          </div>
+
           <hr class="hr">
 
           <div class="sec">
@@ -1288,7 +1305,9 @@ const ICO={
  image:'<rect x="3" y="4" width="18" height="16" rx="2.4"/><circle cx="8.6" cy="9.6" r="1.7"/><path d="m3.6 17.8 4.9-4.6 3.4 3.1 3.2-3 4.4 4"/>',
  warn:'<path d="M12 4.5 2.8 20h18.4L12 4.5Z"/><path d="M12 10v4.2"/><circle cx="12" cy="17.2" r=".9" fill="currentColor" stroke="none"/>',
  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r=".9" fill="currentColor" stroke="none"/>',
- pin:'<path d="M9 4h6l-.8 5.2 3 2.6V14H6.8v-2.2l3-2.6L9 4ZM12 14v6"/>'
+ pin:'<path d="M9 4h6l-.8 5.2 3 2.6V14H6.8v-2.2l3-2.6L9 4ZM12 14v6"/>',
+ dice:'<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.6" cy="8.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.4" cy="15.4" r="1.35" fill="currentColor" stroke="none"/><circle cx="15.4" cy="8.6" r="1.35" fill="currentColor" stroke="none"/><circle cx="8.6" cy="15.4" r="1.35" fill="currentColor" stroke="none"/>',
+ drop:'<path d="M12 3.2s6 6.6 6 10.4a6 6 0 0 1-12 0C6 9.8 12 3.2 12 3.2Z"/>'
 };
 function ico(name,size){
   const s=size||18;
@@ -1783,6 +1802,167 @@ function monoTheme(id,name,h,sat,lit){
   ],{accent:acc});
 }
 
+/* ============================================================
+   COLOUR MIXER
+   Pick 1–3 colours; the mixer shuffles which colour plays which ROLE rather than
+   inventing new colours, so your picks never disappear. Every derived value still
+   goes through ensure()/fitFill()/separate(), so no shuffle can land on a
+   combination you cannot read.
+   ============================================================ */
+const MIX_DEF={ c1:'#FFD400', c2:'#2B2B2B', c3:'#E62D20',
+  on2:true, on3:true, white:true, black:true, tint:true, paperMix:78, order:null };
+
+function mixRoleKeys(m){
+  const k=['c1'];
+  if(m.on2!==false && m.c2) k.push('c2');
+  if(m.on3!==false && m.c3) k.push('c3');
+  if(m.white!==false) k.push('white');
+  if(m.black!==false) k.push('black');
+  return k;
+}
+function mixRoleColor(k,m){
+  if(k==='c1') return hx(m.c1)||'#FFD400';
+  if(k==='c2') return hx(m.c2)||hx(m.c1)||'#2B2B2B';
+  if(k==='c3') return hx(m.c3)||hx(m.c2)||hx(m.c1)||'#E62D20';
+  if(k==='white') return '#FFFFFF';
+  if(k==='black') return '#111111';
+  return null;
+}
+/* drop roles that got switched off, append ones that got switched on, kill dupes */
+function mixOrder(m){
+  const en=mixRoleKeys(m);
+  const saved=Array.isArray(m.order)?m.order:[];
+  const out=saved.filter(function(r,i){ return en.indexOf(r)>=0 && saved.indexOf(r)===i; });
+  en.forEach(function(r){ if(out.indexOf(r)<0) out.push(r); });
+  return out;
+}
+function mixColors(m){
+  const out=[];
+  mixOrder(m).forEach(function(k){
+    const c=mixRoleColor(k,m);
+    if(c && !out.some(function(x){return x.toUpperCase()===c.toUpperCase();})) out.push(c);
+  });
+  if(!out.length) out.push(hx(m.c1)||'#FFD400');
+  return out;
+}
+/* Fisher–Yates, retried until the order actually changes — a shuffle button that
+   sometimes does nothing reads as broken */
+function shuffleMix(m,rnd){
+  rnd=rnd||Math.random;
+  const keys=mixRoleKeys(m);
+  if(keys.length<2) return null;
+  const prev=mixOrder(m).join('|');
+  const sh=keys.slice();
+  for(let a=0;a<12;a++){
+    for(let i=sh.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); const t=sh[i]; sh[i]=sh[j]; sh[j]=t; }
+    if(sh.join('|')!==prev) break;
+  }
+  return sh;
+}
+/* the most legible highlight on this background; give up rather than ship a faint one */
+function bestAccent(bg,base,cands){
+  let best=null,bs=-1;
+  cands.forEach(function(c){
+    if(base && c.toUpperCase()===String(base).toUpperCase()) return;
+    const sc=contrast(c,bg);
+    if(sc>bs){ bs=sc; best=c; }
+  });
+  if(best && bs<3 && base) return base;
+  return best||cands[0]||'#111111';
+}
+/* A fill has two jobs at once: stand apart from what is behind it, AND be extreme
+   enough that black or white text sits on it legibly. Nudging for one can undo the
+   other, so settle both together and take whichever direction gets there first. */
+function settleFill(c,bg,minSep,minTxt,prefer){
+  const ok=function(x){
+    return contrast(x,bg)>=minSep &&
+           Math.max(contrast(x,'#FFFFFF'),contrast(x,'#0A0B0D'))>=minTxt;
+  };
+  const base=hx(c)||'#888888';
+  if(ok(base)) return base;
+  const dirs = prefer==='light' ? ['#FFFFFF'] : prefer==='dark' ? ['#0A0B0D'] : ['#FFFFFF','#0A0B0D'];
+  let best=null, bestSteps=999;
+  dirs.forEach(function(dir){
+    let x=base;
+    for(let i=1;i<=48;i++){
+      x=mix(x,dir,0.05);
+      if(ok(x)){ if(i<bestSteps){ bestSteps=i; best=x; } break; }
+    }
+  });
+  return best || (lum(bg)>0.5 ? '#0A0B0D' : '#FFFFFF');
+}
+function byLum(a,dir){ return a.slice().sort(function(x,y){ return dir*(lum(x)-lum(y)); })[0]; }
+
+function mixerTheme(m){
+  m=Object.assign({},MIX_DEF,m||{});
+  const act=mixColors(m), n=act.length;
+  const A=act[0], B=act[1%n], C=act[2%n];
+  const W = m.white!==false ? '#FFFFFF' : byLum(act,-1);
+  const K = m.black!==false ? '#111111' : byLum(act,1);
+  const tint = m.tint!==false;
+  const pm = clamp((m.paperMix==null?78:m.paperMix)/100, 0, 0.94);
+
+  /* ---------- chat ---------- */
+  const bg   = tint ? mix(B,W,pm) : B;
+  const dark = lum(bg)<0.42;
+  const me   = settleFill(A, bg, 1.22, 4.85, null);
+  const you  = settleFill(dark ? mix(bg,W,0.16) : mix(bg,W,0.86), bg, 1.16, 7.2, 'light');
+  const bar  = fitFill(dark ? mix(bg,W,0.11) : mix(bg,W,0.55), 6.2);
+  const dchip= fitFill(dark ? mix(bg,W,0.15) : mix(bg,K,0.28), 4.6);
+  const misB = fitFill(C,5.2);
+  const chat={
+    bgType:'solid', bg1:bg, bg2:tint?mix(B,W,clamp(pm-0.2,0,0.9)):mix(B,K,0.25),
+    bgAngle:160, bgImg:'', bgDim:0,
+    barBg:bar, barText:ensure(readable(bar),bar,6), barLine:!dark,
+    meBg:me,  meText:ensure(readable(me),me,4.6),
+    youBg:you, youText:ensure(readable(you),you,7),
+    nameCol:ensure(dark?mix(W,bg,0.28):mix(K,bg,0.10),bg,3.4),
+    timeCol:ensure(mix(readable(bg),bg,0.42),bg,2.6),
+    dateBg:dchip, dateText:ensure(readable(dchip),dchip,5),
+    misBg:misB, misText:ensure(readable(misB),misB,5),
+    radius:16, fontSize:15, nameSize:12.5, timeSize:10.5, barSize:16.5,
+    tail:true, avatar:true, avatarR:14, avatarSize:38,
+    showInput:true, inputBg: dark?mix(bg,W,0.10):mix(bar,W,0.6),
+    showHome:true, statusDark:!dark, showRead:true, readLabel:'읽음',
+    readCol:ensure(bestAccent(bg, null, act), bg, 2.6)
+  };
+
+  /* ---------- memo ---------- */
+  const chrom=act.slice().sort(function(x,y){ return chroma(y)-chroma(x); })[0];
+  let mbg, card;
+  if(dark){
+    mbg  = mix(bg,'#000000',0.22);
+    card = mix(bg,'#FFFFFF',0.085);
+  }else{
+    mbg = mix(chrom,'#FFFFFF',0.46);
+    let g=0; while(lum(mbg)<0.70 && g++<18) mbg=mix(mbg,'#FFFFFF',0.11);
+    card = mix(W,'#FFFFFF',0.55);
+  }
+  /* settle the card FIRST so text sits on it, THEN separate it from the page —
+     the other order lets fitFill drag the card back into the page it just left */
+  card = fitFill(card, 9);
+  let g2=0;
+  while(contrast(card,mbg)<1.10 && g2++<90){
+    if(!dark && lum(card)<0.93){ card=mix(card,'#FFFFFF',0.07); continue; }
+    /* push the page away from whichever side the card is on: monotonic, always converges */
+    mbg = mix(mbg, lum(card)>0.5 ? '#000000' : '#FFFFFF', 0.05);
+  }
+  const mtitle=ensure(dark?'#F4F6F8':K, card, 6.4);
+  const macc=ensure(bestAccent(card, null, act), card, 2.6);
+  const tagBg=fitFill(mix(card,macc,dark?0.3:0.26),5.2);
+  const memo={
+    bgType:'solid', bg1:mbg, bg2:mix(mbg,dark?'#000000':'#FFFFFF',0.3), bgAngle:160, bgImg:'', bgDim:0,
+    barBg:fitFill(mbg,7.2), barText:ensure(mtitle,fitFill(mbg,7.2),7), barLine:true,
+    cardBg:card, titleCol:mtitle, bodyCol:ensure(mix(mtitle,card,0.22),card,4.8),
+    subCol:ensure(mix(mtitle,card,0.46),card,3.3),
+    accent:macc, tagBg:tagBg, tagText:ensure(readable(tagBg),tagBg,4.6),
+    radius:14, fontSize:15, titleSize:22, listTitleSize:15.5, subSize:12.5, bigSize:31, barSize:16.5,
+    paper:'none', statusDark:!dark, showSearch:true, showHome:true
+  };
+
+  return { chat:Object.assign(deep(CHAT_DEF),chat), memo:Object.assign(deep(MEMO_DEF),memo) };
+}
+
 /* ---- hand-tuned signature themes ---- */
 const HAND=[
 { id:'kakao', name:'카카오톡', pal:['#B2C7D9','#FEE500','#FFFFFF','#3A4750'],
@@ -1910,7 +2090,8 @@ const S={
   scale:2,
   fileName:{chat:'',memo:''},
   flip:false, flipIdx:0, statusBar:true, statusTime:'11:34',
-  panelW:428, stageH:0, thFold:false,
+  panelW:428, stageH:0, thFold:false, mixFold:false, thFilter:'기본',
+  mixer:null,
   _dirty:0
 };
 
@@ -1922,7 +2103,8 @@ function snap(){
     memo:S.memo, range:S.range, theme:S.theme, themeId:S.themeId, custom:S.custom,
     avatars:S.avatars, pages:S.pages, scale:S.scale, fileName:S.fileName,
     statusBar:S.statusBar, statusTime:S.statusTime,
-    panelW:S.panelW, stageH:S.stageH, thFold:S.thFold, at:Date.now()
+    panelW:S.panelW, stageH:S.stageH, thFold:S.thFold, mixFold:S.mixFold, thFilter:S.thFilter,
+    mixer:S.mixer, at:Date.now()
   };
 }
 let lastSave=0, saveFail=false;
@@ -1959,7 +2141,8 @@ function load(){
     S.fileName=Object.assign({chat:'',memo:''},d.fileName);
     S.statusBar=d.statusBar!==false;
     S.statusTime=d.statusTime||'11:34';
-    S.panelW=d.panelW||428; S.stageH=d.stageH||0; S.thFold=!!d.thFold;
+    S.panelW=d.panelW||428; S.stageH=d.stageH||0; S.thFold=!!d.thFold; S.mixFold=!!d.mixFold;
+    S.thFilter=d.thFilter||'기본'; S.mixer=d.mixer||null;
     lastSave=d.at||0;
     return !!(S.raw.chat||S.raw.memo);
   }catch(e){ return false; }
@@ -3658,7 +3841,7 @@ function fmtBar(inp){
 /* ============================================================
    THEME UI
    ============================================================ */
-let thFilter='all';
+
 
 function allThemes(){ return THEMES.concat(S.custom); }
 
@@ -3711,11 +3894,11 @@ function paintThemeGrid(){
   const f=$('#thFilter');
   if(f){
     f.innerHTML='';
-    const groups=[['all','전체'],['기본','기본'],['단색','단색'],['팔레트','팔레트'],['내 테마','내 테마']];
+    const groups=[['기본','기본'],['단색','단색'],['팔레트','팔레트'],['내 테마','내 테마'],['all','전체']];
     groups.forEach(function(g){
       if(g[0]==='내 테마' && !S.custom.length) return;
-      const c=el('button','chip'+(thFilter===g[0]?' is-on':''),g[1]);
-      on(c,'click',function(){ thFilter=g[0]; paintThemeGrid(); });
+      const c=el('button','chip'+(S.thFilter===g[0]?' is-on':''),g[1]);
+      on(c,'click',function(){ S.thFilter=g[0]; paintThemeGrid(); save(); });
       f.appendChild(c);
     });
   }
@@ -3723,7 +3906,7 @@ function paintThemeGrid(){
   g.innerHTML='';
   allThemes().forEach(function(t){
     const grp=t.custom?'내 테마':(t.grp||'기본');
-    if(thFilter!=='all' && grp!==thFilter) return;
+    if(S.thFilter!=='all' && grp!==S.thFilter) return;
     g.appendChild(themeChip(t));
   });
   if(!g.children.length) g.innerHTML='<p class="hint">해당 그룹의 테마가 없습니다.</p>';
@@ -3758,6 +3941,121 @@ function applyTheme(t){
   S.themeId=t.id;
   paintThemeGrid(); paintThemeFold(); paintThemeEditor(true); renderAll();
   toast(t.name+' 테마를 적용했습니다');
+}
+
+/* ============================================================
+   COLOUR MIXER UI  —  sits right under the theme grid
+   ============================================================ */
+function mixState(){ if(!S.mixer) S.mixer=deep(MIX_DEF); return S.mixer; }
+function applyMixer(){
+  const t=mixerTheme(mixState());
+  S.theme.chat=t.chat; S.theme.memo=t.memo; S.themeId='';
+  paintThemeGrid(); paintThemeFold(); paintThemeEditor(true); renderAll(); save();
+}
+const applyMixerSoon=debounce(function(){
+  const t=mixerTheme(mixState());
+  S.theme.chat=t.chat; S.theme.memo=t.memo; S.themeId='';
+  renderSoon(); save();
+},70);
+
+function mixColorRow(label,key,onKey){
+  const m=mixState();
+  const r=el('div','col-row');
+  const sw=el('label','col-sw'); const fi=el('i'); sw.appendChild(fi);
+  const inp=document.createElement('input'); inp.type='color'; sw.appendChild(inp);
+  r.appendChild(sw);
+  r.appendChild(el('div','col-lab',label));
+  const hexI=document.createElement('input'); hexI.className='col-hex'; hexI.spellcheck=false; r.appendChild(hexI);
+  let tog=null;
+  if(onKey){ tog=el('button','chip'); r.appendChild(tog); }
+  const paint=function(){
+    const v=hx(m[key])||'#000000';
+    fi.style.background=v; inp.value=v;
+    if(document.activeElement!==hexI) hexI.value=v;
+    if(tog){
+      const ov=m[onKey]!==false;
+      tog.textContent=ov?'사용':'끔';
+      tog.classList.toggle('is-on',ov);
+      sw.style.opacity=ov?'':'.4';
+    }
+  };
+  on(inp,'input',function(){ m[key]=hx(inp.value); paint(); applyMixerSoon(); });
+  on(inp,'change',function(){ m[key]=hx(inp.value); paint(); applyMixer(); paintMixer(); });
+  on(hexI,'change',function(){ const v=hx(hexI.value); if(v){ m[key]=v; applyMixer(); paintMixer(); } else paint(); });
+  on(hexI,'blur',paint);
+  if(tog) on(tog,'click',function(){ m[onKey]=(m[onKey]===false); applyMixer(); paintMixer(); });
+  paint();
+  return r;
+}
+
+function paintMixer(){
+  const box=$('#mixUI'); if(!box) return;
+  const m=mixState();
+  const open=!S.mixFold;
+  const btn=$('#btnMixFold');
+  if(btn){ btn.setAttribute('aria-expanded',String(open)); btn.title=open?'접기':'펼치기'; }
+  box.hidden=!open;
+  if(!open) return;
+
+  box.innerHTML='';
+  box.appendChild(mixColorRow('테마색','c1',null));
+  box.appendChild(mixColorRow('보조색 1','c2','on2'));
+  box.appendChild(mixColorRow('보조색 2','c3','on3'));
+
+  const nb=el('div','chips'); nb.style.margin='11px 0 4px';
+  [['white','흰색 섞기'],['black','검정 섞기'],['tint','배경 물들이기']].forEach(function(p){
+    const c=el('button','chip'+(m[p[0]]!==false?' is-on':''),p[1]);
+    on(c,'click',function(){ m[p[0]]=(m[p[0]]===false); applyMixer(); paintMixer(); });
+    nb.appendChild(c);
+  });
+  box.appendChild(nb);
+
+  if(m.tint!==false){
+    box.appendChild(sldPlain('배경 연하기',()=>m.paperMix,function(v){ m.paperMix=v; },20,94,2,'%',
+      function(){ applyMixerSoon(); }, function(){ applyMixer(); paintMixer(); }));
+  }
+
+  /* what each colour is currently doing */
+  const act=mixColors(m);
+  const roles=['말풍선','배경','강조'];
+  const strip=el('div','mix-strip');
+  act.slice(0,3).forEach(function(c,i){
+    const w=el('div','mix-role');
+    const s2=el('div','mix-sw'); s2.style.background=c; w.appendChild(s2);
+    w.appendChild(el('div','mix-lab',roles[i]));
+    strip.appendChild(w);
+  });
+  box.appendChild(strip);
+
+  const sh=el('button','btn lg ink-btn block');
+  sh.innerHTML=ico('dice',17)+'색 배치 섞기';
+  on(sh,'click',function(){
+    const o=shuffleMix(m);
+    if(!o){ toast('색을 2개 이상 켜 주세요','warn'); return; }
+    m.order=o; applyMixer(); paintMixer();
+    toast('색 배치를 섞었습니다');
+  });
+  box.appendChild(sh);
+
+  const h=el('p','hint');
+  h.innerHTML='고른 색은 그대로 두고 <b>어느 색이 어느 자리에 들어갈지</b>만 섞습니다. '+
+              '어떤 조합이 나와도 글자 대비는 자동으로 맞춰집니다.';
+  h.style.marginTop='9px';
+  box.appendChild(h);
+}
+
+/* a slider that drives a plain getter/setter (the theme editor's needs T()) */
+function sldPlain(label,get,set,min,max,step,unit,onLive,onDone){
+  const f=el('div','field');
+  const lab=el('span','lab'); lab.appendChild(el('span',null,label));
+  const val=el('span','val'); lab.appendChild(val); f.appendChild(lab);
+  const node=el('div','sld'); f.appendChild(node);
+  const fmt=v=>(Math.round(v*10)/10)+unit;
+  makeSlider(node,{min:min,max:max,step:step,value:get(),fmt:fmt,
+    onInput:function(v){ val.textContent=fmt(v); set(v); onLive&&onLive(); },
+    onChange:function(v){ val.textContent=fmt(v); set(v); onDone&&onDone(); }});
+  val.textContent=fmt(get());
+  return f;
 }
 
 /* ---------- readability repair ---------- */
@@ -4052,7 +4350,7 @@ function applyMode(){
   paintStageTools();
   _thKey='';
   reparseIfNeeded();
-  paintThemeGrid(); paintThemeEditor(true);
+  paintThemeGrid(); paintMixer(); paintThemeEditor(true);
   syncInputs();
   afterDataChange(true);
 }
@@ -4182,6 +4480,10 @@ function wire(){
 
   /* theme */
   on($('#btnThFold'),'click',function(){ S.thFold=!S.thFold; paintThemeFold(); save(); });
+  on($('#btnMixFold'),'click',function(){ S.mixFold=!S.mixFold; paintMixer(); save(); });
+  on($('#btnMixReset'),'click',function(){
+    S.mixer=deep(MIX_DEF); applyMixer(); paintMixer(); toast('색 조합을 기본값으로 되돌렸습니다');
+  });
   on($('#btnFoldAll'),'click',function(){
     const folds=$$('#thEditor .fold');
     const anyOpen=folds.some(f=>f.classList.contains('is-open'));
@@ -4435,6 +4737,7 @@ function boot(reload){
   paintSaveStat();
   paintThemeGrid();
   paintThemeFold();
+  paintMixer();
   paintThemeEditor(true);
   syncInputs();
   setTab('input');

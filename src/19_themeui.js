@@ -2,7 +2,7 @@
 /* ============================================================
    THEME UI
    ============================================================ */
-let thFilter='all';
+
 
 function allThemes(){ return THEMES.concat(S.custom); }
 
@@ -55,11 +55,11 @@ function paintThemeGrid(){
   const f=$('#thFilter');
   if(f){
     f.innerHTML='';
-    const groups=[['all','전체'],['기본','기본'],['단색','단색'],['팔레트','팔레트'],['내 테마','내 테마']];
+    const groups=[['기본','기본'],['단색','단색'],['팔레트','팔레트'],['내 테마','내 테마'],['all','전체']];
     groups.forEach(function(g){
       if(g[0]==='내 테마' && !S.custom.length) return;
-      const c=el('button','chip'+(thFilter===g[0]?' is-on':''),g[1]);
-      on(c,'click',function(){ thFilter=g[0]; paintThemeGrid(); });
+      const c=el('button','chip'+(S.thFilter===g[0]?' is-on':''),g[1]);
+      on(c,'click',function(){ S.thFilter=g[0]; paintThemeGrid(); save(); });
       f.appendChild(c);
     });
   }
@@ -67,7 +67,7 @@ function paintThemeGrid(){
   g.innerHTML='';
   allThemes().forEach(function(t){
     const grp=t.custom?'내 테마':(t.grp||'기본');
-    if(thFilter!=='all' && grp!==thFilter) return;
+    if(S.thFilter!=='all' && grp!==S.thFilter) return;
     g.appendChild(themeChip(t));
   });
   if(!g.children.length) g.innerHTML='<p class="hint">해당 그룹의 테마가 없습니다.</p>';
@@ -102,6 +102,121 @@ function applyTheme(t){
   S.themeId=t.id;
   paintThemeGrid(); paintThemeFold(); paintThemeEditor(true); renderAll();
   toast(t.name+' 테마를 적용했습니다');
+}
+
+/* ============================================================
+   COLOUR MIXER UI  —  sits right under the theme grid
+   ============================================================ */
+function mixState(){ if(!S.mixer) S.mixer=deep(MIX_DEF); return S.mixer; }
+function applyMixer(){
+  const t=mixerTheme(mixState());
+  S.theme.chat=t.chat; S.theme.memo=t.memo; S.themeId='';
+  paintThemeGrid(); paintThemeFold(); paintThemeEditor(true); renderAll(); save();
+}
+const applyMixerSoon=debounce(function(){
+  const t=mixerTheme(mixState());
+  S.theme.chat=t.chat; S.theme.memo=t.memo; S.themeId='';
+  renderSoon(); save();
+},70);
+
+function mixColorRow(label,key,onKey){
+  const m=mixState();
+  const r=el('div','col-row');
+  const sw=el('label','col-sw'); const fi=el('i'); sw.appendChild(fi);
+  const inp=document.createElement('input'); inp.type='color'; sw.appendChild(inp);
+  r.appendChild(sw);
+  r.appendChild(el('div','col-lab',label));
+  const hexI=document.createElement('input'); hexI.className='col-hex'; hexI.spellcheck=false; r.appendChild(hexI);
+  let tog=null;
+  if(onKey){ tog=el('button','chip'); r.appendChild(tog); }
+  const paint=function(){
+    const v=hx(m[key])||'#000000';
+    fi.style.background=v; inp.value=v;
+    if(document.activeElement!==hexI) hexI.value=v;
+    if(tog){
+      const ov=m[onKey]!==false;
+      tog.textContent=ov?'사용':'끔';
+      tog.classList.toggle('is-on',ov);
+      sw.style.opacity=ov?'':'.4';
+    }
+  };
+  on(inp,'input',function(){ m[key]=hx(inp.value); paint(); applyMixerSoon(); });
+  on(inp,'change',function(){ m[key]=hx(inp.value); paint(); applyMixer(); paintMixer(); });
+  on(hexI,'change',function(){ const v=hx(hexI.value); if(v){ m[key]=v; applyMixer(); paintMixer(); } else paint(); });
+  on(hexI,'blur',paint);
+  if(tog) on(tog,'click',function(){ m[onKey]=(m[onKey]===false); applyMixer(); paintMixer(); });
+  paint();
+  return r;
+}
+
+function paintMixer(){
+  const box=$('#mixUI'); if(!box) return;
+  const m=mixState();
+  const open=!S.mixFold;
+  const btn=$('#btnMixFold');
+  if(btn){ btn.setAttribute('aria-expanded',String(open)); btn.title=open?'접기':'펼치기'; }
+  box.hidden=!open;
+  if(!open) return;
+
+  box.innerHTML='';
+  box.appendChild(mixColorRow('테마색','c1',null));
+  box.appendChild(mixColorRow('보조색 1','c2','on2'));
+  box.appendChild(mixColorRow('보조색 2','c3','on3'));
+
+  const nb=el('div','chips'); nb.style.margin='11px 0 4px';
+  [['white','흰색 섞기'],['black','검정 섞기'],['tint','배경 물들이기']].forEach(function(p){
+    const c=el('button','chip'+(m[p[0]]!==false?' is-on':''),p[1]);
+    on(c,'click',function(){ m[p[0]]=(m[p[0]]===false); applyMixer(); paintMixer(); });
+    nb.appendChild(c);
+  });
+  box.appendChild(nb);
+
+  if(m.tint!==false){
+    box.appendChild(sldPlain('배경 연하기',()=>m.paperMix,function(v){ m.paperMix=v; },20,94,2,'%',
+      function(){ applyMixerSoon(); }, function(){ applyMixer(); paintMixer(); }));
+  }
+
+  /* what each colour is currently doing */
+  const act=mixColors(m);
+  const roles=['말풍선','배경','강조'];
+  const strip=el('div','mix-strip');
+  act.slice(0,3).forEach(function(c,i){
+    const w=el('div','mix-role');
+    const s2=el('div','mix-sw'); s2.style.background=c; w.appendChild(s2);
+    w.appendChild(el('div','mix-lab',roles[i]));
+    strip.appendChild(w);
+  });
+  box.appendChild(strip);
+
+  const sh=el('button','btn lg ink-btn block');
+  sh.innerHTML=ico('dice',17)+'색 배치 섞기';
+  on(sh,'click',function(){
+    const o=shuffleMix(m);
+    if(!o){ toast('색을 2개 이상 켜 주세요','warn'); return; }
+    m.order=o; applyMixer(); paintMixer();
+    toast('색 배치를 섞었습니다');
+  });
+  box.appendChild(sh);
+
+  const h=el('p','hint');
+  h.innerHTML='고른 색은 그대로 두고 <b>어느 색이 어느 자리에 들어갈지</b>만 섞습니다. '+
+              '어떤 조합이 나와도 글자 대비는 자동으로 맞춰집니다.';
+  h.style.marginTop='9px';
+  box.appendChild(h);
+}
+
+/* a slider that drives a plain getter/setter (the theme editor's needs T()) */
+function sldPlain(label,get,set,min,max,step,unit,onLive,onDone){
+  const f=el('div','field');
+  const lab=el('span','lab'); lab.appendChild(el('span',null,label));
+  const val=el('span','val'); lab.appendChild(val); f.appendChild(lab);
+  const node=el('div','sld'); f.appendChild(node);
+  const fmt=v=>(Math.round(v*10)/10)+unit;
+  makeSlider(node,{min:min,max:max,step:step,value:get(),fmt:fmt,
+    onInput:function(v){ val.textContent=fmt(v); set(v); onLive&&onLive(); },
+    onChange:function(v){ val.textContent=fmt(v); set(v); onDone&&onDone(); }});
+  val.textContent=fmt(get());
+  return f;
 }
 
 /* ---------- readability repair ---------- */
