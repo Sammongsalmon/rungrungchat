@@ -106,6 +106,27 @@ const PDEF={'background-image':'none','box-shadow':'none','text-shadow':'none','
 'text-decoration-thickness':'auto','text-underline-offset':'auto','font-style':'normal',
 '-webkit-text-stroke-width':'0px','right':'auto','bottom':'auto','top':'auto','left':'auto'};
 
+/* Does this element hold its own text, and all of it on one line?
+   Anything with pre* white-space is excluded: there the line breaks ARE content. */
+function oneLineText(s){
+  let own=false;
+  for(let n=s.firstChild;n;n=n.nextSibling)
+    if(n.nodeType===3 && n.textContent.trim()){ own=true; break; }
+  if(!own) return false;
+  if(/^pre|break-spaces/.test(getComputedStyle(s).whiteSpace)) return false;
+  const rg=document.createRange();
+  rg.selectNodeContents(s);
+  const rects=rg.getClientRects();
+  let top=null;
+  for(let i=0;i<rects.length;i++){
+    const r=rects[i];
+    if(!r.width && !r.height) continue;
+    const t=Math.round(r.top);
+    if(top===null) top=t; else if(t!==top) return false;
+  }
+  return top!==null;
+}
+
 function inlineTree(src,dst){
   const a=[src].concat($$('*',src));
   const b=[dst].concat($$('*',dst));
@@ -114,14 +135,26 @@ function inlineTree(src,dst){
     if(!d) break;
     if(s.ownerSVGElement) continue;                /* inside <svg>: attributes already carry paint */
     const cs=getComputedStyle(s);
+    /* A text box is pinned to its getComputedStyle() width — which for a box that
+       sizes to its own text IS that text's minimum width, so the slack is zero
+       (measured: `검색` 27.73/27.73, the status clock -0.14px). The clone then
+       re-lays the text out inside that frozen box, and half a pixel of difference
+       in how the SVG document shapes the same font at the same size is enough to
+       wrap it: `검색` came out as `검`/`색`, `10월 3일` as `10월 3`/`일`.
+       So freeze the LINE, not the box — keep the text on one line and let the box
+       size to it. Dropping `width` restores exactly the flex-basis:auto sizing the
+       preview itself used, so where the two agree nothing moves at all. */
+    const oneLine=oneLineText(s);
     let css='';
     for(let j=0;j<PROPS.length;j++){
       const p=PROPS[j];
+      if(oneLine && (p==='width' || p==='white-space')) continue;
       const v=cs.getPropertyValue(p);
       if(v==='' ) continue;
       if(PDEF[p]!=null && v===PDEF[p]) continue;
       css+=p+':'+v+';';
     }
+    if(oneLine) css+='white-space:nowrap;';
     d.setAttribute('style',css);
     d.removeAttribute('class');
     Array.prototype.slice.call(d.attributes).forEach(function(at){
