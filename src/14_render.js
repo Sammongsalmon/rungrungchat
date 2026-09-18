@@ -80,18 +80,17 @@ function topBar(t,opt){
 /* ============================================================
    CHAT
    ============================================================ */
-/* The tail sits ON the bubble's bottom line — it does not hang below it.
-   Box geometry (13 x 18, left/right -9px, bottom 0):
-     x = 9  -> the bubble's side wall     x = 13 -> 4px inside the bubble
-     y = 18 -> the bubble's bottom line, shared exactly with the bubble
-   NO stroke: a stroke is centred on the path, so any width at all pushes the
-   tail's underside below y=18 and leaves a visible step against the bubble.
-   The 4px overlap is what hides the seam instead. */
+/* A rounded triangle. It is drawn deliberately TOO LONG and clipped by a wrapper
+   whose box is the bubble's box, so the bottom edge is produced by the very same
+   rectangle the bubble's own background is painted into. That is what kills the
+   1px step: a bubble is often a fractional height (60.094px here), and letting the
+   div background and the SVG each round that edge on their own guarantees a
+   mismatch on some device ratios. Sharing one clip rect removes the choice. */
 function tailSvg(dir,col){
   const p = dir==='you'
-    ? 'M13 1.5 C13 9.4 10.2 15 4 17.5 C2.7 17.9 2.9 18 4.3 18 L13 18 Z'
-    : 'M0 1.5 C0 9.4 2.8 15 9 17.5 C10.3 17.9 10.1 18 8.7 18 L0 18 Z';
-  return svgTag(13,18,'cv-tail','<path d="'+p+'" fill="'+col+'"/>');
+    ? 'M14 2 C14 9 12.2 14 6.2 16.6 C4.2 17.5 3 19 3.8 21 L14 21 Z'
+    : 'M0 2 C0 9 1.8 14 7.8 16.6 C9.8 17.5 11 19 10.2 21 L0 21 Z';
+  return svgTag(14,22,'cv-tail','<path d="'+p+'" fill="'+col+'"/>');
 }
 function avatarNode(name,t){
   const a=avatarFor(name);
@@ -166,7 +165,7 @@ function renderChatPage(units,opt){
     bub.style.borderRadius = t.radius+'px';
     bub.style.fontSize = (t.fontSize||15)+'px';
     bub.innerHTML = richHTML(u.text);
-    line.appendChild(bub);
+    let bubHost=bub;
 
     const nxt=units[idx+1];
     const isLast = !nxt || nxt.gi!==u.gi || (nxt.who===S.chat.me)!==mine;
@@ -176,7 +175,11 @@ function renderChatPage(units,opt){
       const flat=Math.min(3,t.radius)+'px';
       if(mine) bub.style.borderBottomRightRadius=flat; else bub.style.borderBottomLeftRadius=flat;
       bub.appendChild(tailSvg(mine?'me':'you', mine?t.meBg:t.youBg));
+      const tw=el('div','cv-tw '+(mine?'me':'you'));
+      tw.appendChild(bub);
+      bubHost=tw;
     }
+    line.appendChild(bubHost);
 
     if(isLast){
       const meta=el('div','cv-meta');
