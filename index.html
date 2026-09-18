@@ -8,7 +8,8 @@
 <title>룽룽씨 메이커</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" media="print" onload="this.media='all'">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2317181C'/%3E%3Cpath d='M8 12h16M8 17h11' stroke='%23fff' stroke-width='2.4' stroke-linecap='round'/%3E%3Cpath d='M20 22.5l3.6-2.4H24' stroke='%23FF6B57' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#9730CF">
+<link rel="icon" id="favicon" href="">
 <style>
 /* ============================================================
    0. RESET + TOKENS
@@ -50,13 +51,14 @@ img{display:block;max-width:100%}
   --text-4:#B6BCC5;
   --ink:#17181C;
   --ink-h:#2A2C33;
-  --accent:#3B5BFD;
-  --accent-soft:#EDF1FF;
-  --accent-line:#C9D5FF;
+  --accent:#9730CF;
+  --accent-soft:#F9EDFF;
+  --accent-line:#E4BFF7;
+  --brand:#E0A8FF;
   --danger:#E0453A;
   --danger-soft:#FDEEEC;
   --ok:#12996B;
-  --focus:#3B5BFD;
+  --focus:#9730CF;
   --scroll:#C9CED6;  --scroll-h:#AEB5BF;
 
   --r-xs:6px; --r-sm:9px; --r-md:12px; --r-lg:16px; --r-xl:22px;
@@ -80,13 +82,14 @@ html[data-ui="dark"]{
   --text-4:#5B626D;
   --ink:#EDEFF2;
   --ink-h:#FFFFFF;
-  --accent:#7B93FF;
-  --accent-soft:#1D2440;
-  --accent-line:#2E3C6B;
+  --accent:#CD88F2;
+  --accent-soft:#2E183A;
+  --accent-line:#502B64;
+  --brand:#E0A8FF;
   --danger:#FF6A5E;
   --danger-soft:#33201E;
   --ok:#31C48D;
-  --focus:#7B93FF;
+  --focus:#CD88F2;
   --scroll:#3A404A; --scroll-h:#4C535F;
   --sh-1:0 1px 2px rgba(0,0,0,.4);
   --sh-2:0 2px 6px rgba(0,0,0,.4);
@@ -118,6 +121,7 @@ body{
 }
 .brand{display:flex;align-items:center;gap:9px;min-width:0}
 .brand svg{flex:0 0 auto}
+.brand-logo{flex:0 0 auto;width:30px;height:30px;object-fit:contain;image-rendering:auto}
 .brand h1{
   font-size:16px;font-weight:700;letter-spacing:-.017em;white-space:nowrap;
 }
@@ -961,11 +965,7 @@ html[data-ui="dark"] .toast{color:#15171B}
   <!-- ============ APP BAR ============ -->
   <header class="appbar">
     <div class="brand">
-      <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
-        <rect width="32" height="32" rx="8.5" fill="currentColor"/>
-        <path d="M8.5 12.2h15M8.5 17h10.5" stroke="var(--surface)" stroke-width="2.3" stroke-linecap="round"/>
-        <path d="M19.4 22.8l4.1-2.8" stroke="#FF6B57" stroke-width="2.3" stroke-linecap="round"/>
-      </svg>
+      <img class="brand-logo" id="brandLogo" alt="" width="30" height="30" src="data:image/png;base64,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">
       <h1>룽룽씨 메이커</h1>
       <span class="brand-sub">OOC → 폰 화면</span>
     </div>
@@ -3948,95 +3948,21 @@ function syncEditor(box){
    SAMPLES
    ============================================================ */
 const SAMPLE_CHAT=[
-'< 보낸사람 : 쿠베라 / 발신시간 : 09:14 / 받는사람 : 아모가싯디 >','',
-'[ㅇ]','[ㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇㅇ]','[ㅋㅍㅌ ㅊㄹ ㅇ ㅗ홏]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 09:15 / 받는사람 : 쿠베라 >','',
-'[뭐야]','[어이. 자판 잘못 눌렀냐]','',
-'< 보낸사람 : 쿠베라 / 발신시간 : 09:15 / 받는사람 : 아모가싯디 >','',
-'[ㅇㅏㅃㅏ]','[😾😾😾😾😾😾]','[🍭🍭🍭]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 09:16 / 받는사람 : 쿠베라 >','',
-'[………]','[여울이냐]','[엄마 폰 만지지 마라]','',
-'< 보낸사람 : 쿠베라 / 발신시간 : 09:16 / 받는사람 : 아모가싯디 >','',
-'[아니]','[가온]','[ㅇ ㅏㄴㅣ 여울]','[둘다]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 09:17 / 받는사람 : 쿠베라 >','',
-'[둘 다 뭐야 씨]','[엄마는]','',
-'< 보낸사람 : 쿠베라 / 발신시간 : 09:17 / 받는사람 : 아모가싯디 >','',
-'[샤워]','[여울이가 아빠 사탕 다 먹었어]','[내가 안 먹었어 오빠가 먹었어]','[🍭❌]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 09:18 / 받는사람 : 쿠베라 >','',
-'[다 먹었다고?]','[서랍 두 번째 칸 그거]','[…괜찮아 더 사면 되고]','[이 닦아라 둘 다]','',
-'< 보낸사람 : 쿠베라 / 발신시간 : 09:19 / 받는사람 : 아모가싯디 >','',
-'[아빠 언제 와]','[언제와]','[언제와언제와언제와언제와언제]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 09:19 / 받는사람 : 쿠베라 >','',
-'[**여섯 시**]','[여섯 시에 간다]','[그때까지 엄마 말 들어]','',
-'< 보낸사람 : 쿠베라 / 발신시간 : 09:20 / 받는사람 : 아모가싯디 >','',
-'[여울이가 오빠 던졌어]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 09:20 / 받는사람 : 쿠베라 >','',
-'[뭐]','[던졌다고?]','[야]','[**전화 받아**]','[여울이 폰 줘 봐]','',
-'< 보낸사람 : 쿠베라 / 발신시간 : 09:22 / 받는사람 : 아모가싯디 >','',
-'[안 아파]','[재밌었어]','[또 해도 돼?]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 09:22 / 받는사람 : 쿠베라 >','',
-'[안 돼]','[사람은 던지는 거 아니야]','[…형제한테는 특히 아니야]','[알았냐]','',
-'< 보낸사람 : 쿠베라 / 발신시간 : 09:23 / 받는사람 : 아모가싯디 >','',
-'[알았어]','[아빠는 던졌잖아]','[엄마가 아빠 던진 얘기 해줬어]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 09:24 / 받는사람 : 쿠베라 >','',
-'[…………]','[그건 엄마가 잘못했다]','[~~그건 내가 진 거 아니야~~]','[그 얘긴 나중에 하자]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 09:26 / 받는사람 : 아미타바 (본래 보내려 한 사람 : 쿠베라) >','',
-'[야 애들 사탕 다 털었다]','[그 무설탕 알사탕 어디서 사냐 니가 저번에 준 거]','[**애들 이 썩는다고**]','',
-'< 보낸사람 : 아미타바 / 발신시간 : 09:26 / 받는사람 : 아모가싯디 >','',
-'[형아 사탕은 무슨 사탕]','[헐 애들?? 형아 애 있어???]','[여보 나한테 말도 안 하고????]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 09:27 / 받는사람 : 아미타바 >','',
-'[아니]','[잘못 보냈어]','[꺼져]','',
-'< 보낸사람 : 아미타바 / 발신시간 : 09:27 / 받는사람 : 아모가싯디 >','',
-'[ㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋㅋ]','[형아 나 아까 애기들 봤어 슬럼에서 가람이 누나랑 같이 있었잖아]',
-'[**여울이 형아 얼굴이야 진짜 똑같아**]','[가온이는 누나 닮았고]','[형아 나 이모 시켜줘]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 09:28 / 받는사람 : 아미타바 >','',
-'[너 남자잖아]','[사탕 링크나 보내]','',
-'< 보낸사람 : 쿠베라 / 발신시간 : 09:31 / 받는사람 : 아모가싯디 >','',
-'[아빠]','[엄마 나왔어]','[머리 물 뚝뚝]','[엄마가 폰 왜 만졌냐고]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 09:32 / 받는사람 : 쿠베라 >','',
-'[내가 만지라고 했다고 해]','[아니 그건 거짓말이지]','[…솔직하게 말해라]','[혼나도 내가 같이 혼나 준다]','',
-'< 보낸사람 : 쿠베라 / 발신시간 : 09:33 / 받는사람 : 아모가싯디 >','',
-'[엄마가 웃었어]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 09:33 / 받는사람 : 쿠베라 >','',
-'[……그래]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 09:34 / 받는사람 : 쿠베라 >','',
-'[여섯 시]','[사탕 사서 간다]','[**두 봉지**]','[머리 말리라고 해라. 감기 걸려]','[가람아]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 18:02 / 받는사람 : 쿠베라, 아미타바 >','',
-'[사탕 샀다]','[**두 봉지**]','[아미타바 니 몫은 없다]','',
-'< 보낸사람 : 아미타바 / 발신시간 : 18:03 / 받는사람 : 아모가싯디, 쿠베라 >','',
-'[왜!!!!!]','[형아 나 오늘 링크도 보내줬잖아]','',
-'< 보낸사람 : 쿠베라 / 발신시간 : 18:04 / 받는사람 : 아모가싯디, 아미타바 >','',
-'[아빠 최고]','[이모 미안]','',
-'< 보낸사람 : 아모가싯디 / 발신시간 : 18:04 / 받는사람 : 쿠베라, 아미타바 >','',
-'[이모 아니다]','[…한 봉지는 나눠 먹어라]'
+'< 보낸사람 : 루룽 / 발신시간 : 22:10 / 받는사람 : 삼몽 >','',
+'[OOC 원본-이루룽님 공용 OOC]',
+'[https://www.postype.com/@ooc-rurung/post/21063744]','',
+'< 보낸사람 : 삼몽 / 발신시간 : 22:14 / 받는사람 : 루룽 >','',
+'[OOC 제공/메이커 배포 허락 감사합니다💙]',
+'[🐇💜🦦💙]'
 ].join('\n');
 
 const SAMPLE_MEMO=[
-'< 06/02 03:41 / 제목 없음 >','**생일**','아무도 안 챙기는 거 알고 있었다','~~올해는 좀 다를 줄 알았지~~',
-'아니 챙겨달라고 한 적 없다','자고 일어나면 지나가 있음','',
-'< 06/02 21:07 / 제목 없음 >','**미역국**','그 사람이 끓였다','간이 안 맞았다',
-'소금 어디 있냐고 물어보길래 없다고 했다','있었는데 없다고 했다','왜 그랬는지 모르겠음','~~두 그릇 먹었다~~','',
-'< 09/12 14:22 / ※ 반드시 확인 >','**사야 하는 것**','- 사탕 (무설탕 / 여울이 어금니)','- 가온이 실내화 240',
-'- 손난로 대용량','- ~~맥주~~','- 그 사람 검 손질용 기름. 브랜드 뭐였지','- 감기약 (**액상. 알약 안 먹는다**)','',
-'< 09/12 14:29 / 추가 >','검 손질용 기름','직접 물어보면 되는데 왜 못 물어보냐 씨발','',
-'< 10/03 02:16 / 제목 없음 >','잠 안 옴','옆에서 자는 소리 들으면 왜 심장이 이상하냐','이게 정상이냐고 물어볼 사람이 없다',
-'악쇼브야한테 물어볼까','아니 그 개새끼한테 물어보면 평생 놀림거리다','아미타바는 더 안 된다','',
-'< 10/03 02:31 / 제목 없음 >','결론: 아무한테도 안 물어본다','혼자 알고 있으면 되는 거다','~~근데 알고 싶다~~','',
-'< 11/21 19:50 / 훈련 기록 >','**대련 기록**','9월 – 3승 4패','10월 – 5승 5패','11월 – 4승 6패',
-'*떨어지고 있다*','~~일부러 진 거 아니다~~','~~일부러 진 것도 있다~~','져도 기분 나쁘지 않은 게 제일 이상하다','',
-'< 12/04 23:58 / 제목 없음 >','**애들한테 하면 안 되는 말 목록**','- 등급 얘기','- 미달자','- 열등하다','- ~~쓸모~~ 쓸모','- 쓸모없다',
-'전부 내가 들었던 말이다','입에 붙어서 나오려고 할 때가 있다','그때 혀 씹으면 된다','피 맛 나면 안 나온다','',
-'< 12/04 00:12 / 제목 없음 >','가온이가 내 눈 닮았다고 좋아했다','좋아할 게 아닌데','좋아하길래 아무 말도 안 했다','',
-'< 01/05 07:33 / ★★★ >','**소한**','그 사람 생일','작년에 아무것도 못 했다','올해는',
-'1. 뭐가 먹고 싶은지 물어본다 (직접. 문자 아니고 직접)','2. 케이크 (딸기? 초콜릿? 모른다)','3. 배치표 확인','4. 하루 비운다','5. **말한다**','',
-'< 01/05 07:35 / 제목 없음 >','5번이 제일 어렵다','',
-'< 01/05 07:41 / 제목 없음 >','좋아한다고 이미 했는데','그거 말고 다른 말이 있어야 하는 거 아니냐',
-'근데 그거 말고 아는 말이 없다','평생 부수는 말만 배웠으니까','',
-'< 01/05 07:44 / 제목 없음 >','**그러니까**','안 부수고 있는 걸 세는 게 낫다','',
-'방 하나','컵 두 개','숟가락 네 개','검 한 자루 (부순 적 있음. **이번 건 안 부순다**)','애 둘','심장 하나','',
-'이게 내가 지키고 있는 거 전부다','~~적어보니까 얼마 안 되네~~','아니 많다','많다고 해야 맞다','',
-'< 01/05 07:52 / 제목 없음 >','목록 마지막에 적을 말','','**한가람**','',
-'< 01/05 07:53 / 제목 없음 >','쓰고 나니까 손이 떨린다','~~병신같이~~','지운다','아니 안 지운다'
+'< 10/03 / 제목 없음 >',
+'**OOC 원본-이루룽님 공용 OOC**',
+'https://www.postype.com/@ooc-rurung/post/21063744','',
+'< 11/02 / Thanks to >',
+'**🐇💜🦦💙**',
+'OOC 제공/메이커 배포 허락 감사합니다💙'
 ].join('\n');
 
 /* ============================================================
@@ -4128,7 +4054,11 @@ function wire(){
   on($('#btnSample'),'click',function(){
     S.raw[S.mode]= S.mode==='chat'?SAMPLE_CHAT:SAMPLE_MEMO;
     raw.value=curRaw(); reparse(false);
-    if(S.mode==='chat' && !S.chat.dateLine) { S.chat.dateLine='2026년 9월 18일 금요일'; syncInputs(); }
+    if(S.mode==='chat' && participants().indexOf('삼몽')>=0){
+      S.chat.me='삼몽';
+      paintMeSelect(); paintRoomChips(); paintEditList(); renderAll();
+    }
+    syncInputs();
     toast('예시를 불러왔습니다');
   });
   on($('#btnPaste'),'click',async function(){
@@ -4408,6 +4338,7 @@ function applyUiTheme(){
    BOOT
    ============================================================ */
 function boot(reload){
+  try{ const f=$('#favicon'), b=$('#brandLogo'); if(f&&b) f.href=b.src; }catch(e){}
   if(!reload){
     const had=load();
     if(!had) applyTheme(THEMES[0]);

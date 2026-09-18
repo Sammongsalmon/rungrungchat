@@ -91,3 +91,10 @@ src/
 > 말풍선 꼬리처럼 장식으로 보이는 것도 전부 실제 노드(inline SVG)로 그려져 있습니다.
 
 `Screenshot_*.jpg` 는 팔레트 테마의 출처가 된 참고 이미지입니다.
+
+---
+
+## Thanks to
+
+OOC 원본 — 이루룽님 공용 OOC: https://www.postype.com/@ooc-rurung/post/21063744
+OOC 제공과 메이커 배포를 허락해 주셔서 감사합니다. 🐇💜🦦💙

@@ -13,6 +13,7 @@
 }
 .brand{display:flex;align-items:center;gap:9px;min-width:0}
 .brand svg{flex:0 0 auto}
+.brand-logo{flex:0 0 auto;width:30px;height:30px;object-fit:contain;image-rendering:auto}
 .brand h1{
   font-size:16px;font-weight:700;letter-spacing:-.017em;white-space:nowrap;
 }
