@@ -2137,16 +2137,21 @@ function topBar(t,opt){
 /* ============================================================
    CHAT
    ============================================================ */
-/* A rounded triangle. It is drawn deliberately TOO LONG and clipped by a wrapper
-   whose box is the bubble's box, so the bottom edge is produced by the very same
-   rectangle the bubble's own background is painted into. That is what kills the
-   1px step: a bubble is often a fractional height (60.094px here), and letting the
-   div background and the SVG each round that edge on their own guarantees a
-   mismatch on some device ratios. Sharing one clip rect removes the choice. */
+/* A triangle with straight edges and one rounded vertex (the tip).
+   Box 14 x 22, wall at x=10, bubble's bottom line at y=18.
+     M14 1            top vertex, buried inside the bubble
+     L4.45 15.5       STRAIGHT hypotenuse
+     Q2.8 18 5.8 18   the tip vertex rounded — the quadratic's control point IS the
+                      true vertex, so it leaves the hypotenuse and meets the bottom
+                      line tangentially: no kink at either end
+     L5.8 21 L14 21   carry the fill below the clip line so the wrapper's rectangle
+                      cuts the bottom edge, not the path's own antialiasing
+   The clip box is the bubble's box, which is why the underside lands on exactly the
+   same pixel row as the bubble's background at any device ratio. */
 function tailSvg(dir,col){
   const p = dir==='you'
-    ? 'M14 2 C14 9 12.2 14 6.2 16.6 C4.2 17.5 3 19 3.8 21 L14 21 Z'
-    : 'M0 2 C0 9 1.8 14 7.8 16.6 C9.8 17.5 11 19 10.2 21 L0 21 Z';
+    ? 'M14 1 L4.45 15.5 Q2.8 18 5.8 18 L5.8 21 L14 21 Z'
+    : 'M0 1 L9.55 15.5 Q11.2 18 8.2 18 L8.2 21 L0 21 Z';
   return svgTag(14,22,'cv-tail','<path d="'+p+'" fill="'+col+'"/>');
 }
 function avatarNode(name,t){
