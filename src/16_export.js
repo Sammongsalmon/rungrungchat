@@ -208,13 +208,24 @@ function inlineTree(src,dst){
    transform does not touch. Handing the scaled width to the clone root makes the
    tree short by that much, flex-shrink pushes the shortfall into the tightest text
    boxes so they re-wrap, and .page{overflow:hidden} clips the right edge. */
-function nodeToSvg(node){
+function nodeToSvg(node,scale){
   const r=node.getBoundingClientRect();
   const w=Math.max(1,Math.round(node.offsetWidth||r.width));
   const h=Math.max(1,Math.round(node.offsetHeight||r.height));
   const clone=node.cloneNode(true);
   inlineTree(node,clone);
-  clone.style.margin='0'; clone.style.transform='none'; clone.style.boxShadow='none';
+  clone.style.margin='0'; clone.style.boxShadow='none';
+  /* Resolution comes from a CSS transform on the clone, not from the <svg> viewBox.
+     A viewBox is the usual trick — draw at 1x units, let the raster size do the
+     scaling — but some browsers never apply it to foreignObject content: they lay the
+     HTML out at its literal size and leave it in the TOP-LEFT of an image sized for
+     2x, so the saved file came out with the phone at half size and the right and
+     bottom halves blank. A transform is part of the layout the engine is already
+     performing, so it is honoured everywhere, and the text is still shaped at the
+     final size rather than upscaled from a 1x bitmap. */
+  const sc=(+scale>0?+scale:1);
+  clone.style.transform = sc===1 ? 'none' : 'scale('+sc+')';
+  clone.style.transformOrigin='0 0';
   clone.style.position='relative'; clone.style.left='0'; clone.style.top='0';
   clone.style.width=w+'px'; clone.style.minHeight=h+'px'; clone.style.height=h+'px';
   /* Inherited text properties the app sets on <body>/.pv but PROPS does not carry.
@@ -230,10 +241,12 @@ function nodeToSvg(node){
 
 function nodeToCanvas(node,scale){
   return new Promise(function(res,rej){
-    const d=nodeToSvg(node);
+    const d=nodeToSvg(node,scale);
     const sw=Math.round(d.w*scale), sh=Math.round(d.h*scale);
-    const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sw+'" height="'+sh+'" '+
-      'viewBox="0 0 '+d.w+' '+d.h+'"><foreignObject x="0" y="0" width="'+d.w+'" height="'+d.h+'">'+
+    /* No viewBox: the clone carries the scale itself, so the SVG's own units are the
+       output pixels and there is nothing left for a browser to get wrong. */
+    const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+sw+'" height="'+sh+'">'+
+      '<foreignObject x="0" y="0" width="'+sw+'" height="'+sh+'">'+
       d.xml+'</foreignObject></svg>';
     const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
     const im=new Image();
