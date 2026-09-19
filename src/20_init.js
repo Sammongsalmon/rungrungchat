@@ -268,13 +268,23 @@ function wire(){
   });
 
   /* flip: swipe + keys */
-  let sx=null;
-  on($('#stageArea'),'pointerdown',function(e){ if(S.flip) sx=e.clientX; });
-  on($('#stageArea'),'pointerup',function(e){
-    if(!S.flip||sx==null) return;
-    const d=e.clientX-sx; sx=null;
-    if(Math.abs(d)>42) flipTo(S.flipIdx+(d<0?1:-1));
+  let sx=null, sy=null;
+  const stage=$('#stageArea');
+  on(stage,'pointerdown',function(e){
+    if(!S.flip) return;
+    sx=e.clientX; sy=e.clientY;
+    stage.setPointerCapture&&stage.setPointerCapture(e.pointerId);
   });
+  on(stage,'pointerup',function(e){
+    if(!S.flip||sx==null) return;
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    sx=sy=null;
+    try{ stage.releasePointerCapture&&stage.releasePointerCapture(e.pointerId); }catch(_){}
+    /* a swipe, not a scroll that happened to drift: it has to travel far enough AND
+       be more horizontal than vertical */
+    if(Math.abs(dx)>42 && Math.abs(dx)>Math.abs(dy)) flipTo(S.flipIdx+(dx<0?1:-1));
+  });
+  on(stage,'pointercancel',function(){ sx=sy=null; });
   on(document,'keydown',function(e){
     if(/input|textarea|select/i.test((e.target.tagName||''))) return;
     if(!S.flip) return;

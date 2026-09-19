@@ -104,7 +104,13 @@ html[data-ui="dark"] .seg-ind{background:var(--surface-3)}
   scrollbar-gutter:stable;
   overscroll-behavior-x:contain;
 }
-.stage-area.is-flip{align-items:center;overflow:hidden;padding:0 28px 34px}
+.stage-area.is-flip{
+  align-items:center;overflow:hidden;padding:0 28px 34px;
+  /* pan-y: a sideways swipe here is a page flip, not a scroll of the site. Without
+     this the browser claimed the gesture, slid the whole page, and cancelled the
+     pointer stream so the flip never fired. */
+  touch-action:pan-y;overscroll-behavior:contain;
+}
 
 .deck{
   position:relative;display:flex;gap:26px;align-items:flex-start;

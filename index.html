@@ -16,6 +16,8 @@
    ============================================================ */
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;padding:0}
+/* nothing in this app scrolls sideways; a stray wide child must not drag the site */
+html,body{overflow-x:hidden}
 body{-webkit-text-size-adjust:100%;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 button,input,textarea,select{font:inherit;color:inherit}
 button{background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
@@ -212,7 +214,13 @@ html[data-ui="dark"] .seg-ind{background:var(--surface-3)}
   scrollbar-gutter:stable;
   overscroll-behavior-x:contain;
 }
-.stage-area.is-flip{align-items:center;overflow:hidden;padding:0 28px 34px}
+.stage-area.is-flip{
+  align-items:center;overflow:hidden;padding:0 28px 34px;
+  /* pan-y: a sideways swipe here is a page flip, not a scroll of the site. Without
+     this the browser claimed the gesture, slid the whole page, and cancelled the
+     pointer stream so the flip never fired. */
+  touch-action:pan-y;overscroll-behavior:contain;
+}
 
 .deck{
   position:relative;display:flex;gap:26px;align-items:flex-start;
@@ -5564,13 +5572,23 @@ function wire(){
   });
 
   /* flip: swipe + keys */
-  let sx=null;
-  on($('#stageArea'),'pointerdown',function(e){ if(S.flip) sx=e.clientX; });
-  on($('#stageArea'),'pointerup',function(e){
-    if(!S.flip||sx==null) return;
-    const d=e.clientX-sx; sx=null;
-    if(Math.abs(d)>42) flipTo(S.flipIdx+(d<0?1:-1));
+  let sx=null, sy=null;
+  const stage=$('#stageArea');
+  on(stage,'pointerdown',function(e){
+    if(!S.flip) return;
+    sx=e.clientX; sy=e.clientY;
+    stage.setPointerCapture&&stage.setPointerCapture(e.pointerId);
   });
+  on(stage,'pointerup',function(e){
+    if(!S.flip||sx==null) return;
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    sx=sy=null;
+    try{ stage.releasePointerCapture&&stage.releasePointerCapture(e.pointerId); }catch(_){}
+    /* a swipe, not a scroll that happened to drift: it has to travel far enough AND
+       be more horizontal than vertical */
+    if(Math.abs(dx)>42 && Math.abs(dx)>Math.abs(dy)) flipTo(S.flipIdx+(dx<0?1:-1));
+  });
+  on(stage,'pointercancel',function(){ sx=sy=null; });
   on(document,'keydown',function(e){
     if(/input|textarea|select/i.test((e.target.tagName||''))) return;
     if(!S.flip) return;
