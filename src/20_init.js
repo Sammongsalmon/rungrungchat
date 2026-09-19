@@ -59,6 +59,15 @@ function setTab(name){
   if(name==='export') paintPagesSlider();
 }
 
+/* '홈으로' has to actually land on the home. With '메모장 화면만' the deck behind an
+   opened memo is the detail pages, so going home there means switching picking on —
+   which is also exactly what the user is going home to do. */
+function goMemoHome(){
+  S.memo.open=-1;
+  if(S.memo.exportWhat==='detail' && S.memo.sel.length) S.memo.pick=true;
+  paintStageTools(); paintPagesSlider(); renderAll();
+}
+
 /* ---------- stage tools (memo view/pick switch) ---------- */
 function paintStageTools(){
   const host=$('.stage-tools');
@@ -68,13 +77,14 @@ function paintStageTools(){
   extra=el('div'); extra.id='stageExtra'; extra.style.cssText='display:flex;gap:4px;margin-right:2px';
   if(S.memo.open>=0){
     const b=el('button','btn sm'); b.innerHTML=ico('left',14)+'홈으로';
-    on(b,'click',function(){ S.memo.open=-1; paintStageTools(); renderAll(); });
+    on(b,'click',goMemoHome);
     extra.appendChild(b);
   }else{
     const b=el('button','btn sm'+(S.memo.pick?' ink-btn':''));
     b.innerHTML=ico('check',14)+(S.memo.pick?'선택 중':'메모 고르기');
     b.title='카드를 눌러 내보낼 메모를 고릅니다';
-    on(b,'click',function(){ S.memo.pick=!S.memo.pick; paintStageTools(); renderAll(); });
+    /* picking happens on the home screen, so step out of an opened memo first */
+    on(b,'click',function(){ S.memo.pick=!S.memo.pick; if(S.memo.pick) S.memo.open=-1; paintStageTools(); paintPagesSlider(); renderAll(); });
     extra.appendChild(b);
   }
   host.insertBefore(extra,host.firstChild);
@@ -251,9 +261,7 @@ function wire(){
   on(deck,'click',function(e){
     if(S.mode!=='memo') return;
     /* the phone's own back chevron walks out of a memo too */
-    if(e.target.closest('[data-act="home"]')){
-      S.memo.open=-1; paintStageTools(); paintPagesSlider(); renderAll(); return;
-    }
+    if(e.target.closest('[data-act="home"]')){ goMemoHome(); return; }
     const card=e.target.closest('[data-note]');
     if(!card) return;
     const id=card.dataset.note;
@@ -261,9 +269,9 @@ function wire(){
       const i=S.memo.sel.indexOf(id);
       if(i>=0) S.memo.sel.splice(i,1); else S.memo.sel.push(id);
       paintMemoSelInfo(); paintPagesSlider();
-      /* on the home-only view the pages don't change, so just repaint this card */
-      if(S.memo.exportWhat==='home'){ markMemoCard(card, i<0); save(); }
-      else renderAll();
+      /* while picking the deck is the home screen whatever 내보내기 says, so the pages
+         never change here — just repaint the card that was tapped */
+      markMemoCard(card, i<0); save();
     }else{
       const list=liveList();
       const k=list.findIndex(n=>n.id===id);

@@ -76,10 +76,16 @@ function buildDeck(){
   }
   const what=S.memo.exportWhat;
   const picked=items.filter(n=>S.memo.sel.indexOf(n.id)>=0);
+  /* Picking happens ON the home screen. With '메모장 화면만' the home dropped out of the
+     deck as soon as the first memo was picked, which left no way back to pick a second
+     one or undo the first. So while 고르기 is on the preview always shows the home and
+     nothing else; the export is unaffected, because it runs with EXPORTING set. */
+  const picking=S.memo.pick && !EXPORTING;
 
-  if(what==='home'||what==='both'||!picked.length){
-    /* the page-count slider governs the home screen, and only the home screen */
-    const n=clamp(S.pages.memo,1,items.length);
+  if(picking || what==='home' || what==='both' || !picked.length){
+    /* the page-count slider governs the home screen, and only the home screen — and it
+       is switched off for '메모장 화면만', so the home shown while picking stays whole */
+    const n=(picking && what==='detail') ? 1 : clamp(S.pages.memo,1,items.length);
     if(n<=1){
       deck.appendChild(pageWrap(renderMemoHome(items,{}),'홈',''));
     }else{
@@ -93,7 +99,7 @@ function buildDeck(){
       equalizePages(deck);          /* the home pages match each other */
     }
   }
-  if((what==='detail'||what==='both') && picked.length){
+  if(!picking && (what==='detail'||what==='both') && picked.length){
     const before=$$('.page',deck).length;
     picked.forEach(function(n){
       deck.appendChild(pageWrap(renderMemoDetail(n,null,{}),plain(n.title).slice(0,18),plain(n.title).slice(0,14)));
@@ -255,6 +261,8 @@ function paintStageMeta(n){
   let s='';
   if(!b) s='';
   else if(S.mode==='chat') s=live+' / '+b+'개 말풍선 · '+n+'장';
+  else if(S.mode==='memo' && S.memo.pick && S.memo.exportWhat!=='home')
+    s=live+' / '+b+'개 메모 · 고르는 중 · 홈 화면';
   else s=live+' / '+b+'개 메모 · '+n+'장';
   m.textContent=s;
   $('#tabEditN').textContent=String(b);
