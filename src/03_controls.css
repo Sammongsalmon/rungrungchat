@@ -3,10 +3,10 @@
    4. CUSTOM SLIDER  (pointer-capture; thumb stays where released)
    ============================================================ */
 .sld{
-  /* pan-y, not none: a finger that lands on the row still scrolls the page. Only the
-     marker claims the gesture. */
+  /* pan-y, not none: a vertical swipe that happens to start here still scrolls the
+     panel. Horizontal movement is ours. */
   position:relative;height:34px;display:flex;align-items:center;
-  touch-action:pan-y;cursor:default;user-select:none;-webkit-user-select:none;
+  touch-action:pan-y;cursor:pointer;user-select:none;-webkit-user-select:none;
 }
 .sld-track,.sld-fill,.sld-bub{pointer-events:none}
 .sld-track{

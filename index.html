@@ -446,10 +446,10 @@ html[data-ui="dark"] .choice-b.is-on{background:var(--surface-3)}
    4. CUSTOM SLIDER  (pointer-capture; thumb stays where released)
    ============================================================ */
 .sld{
-  /* pan-y, not none: a finger that lands on the row still scrolls the page. Only the
-     marker claims the gesture. */
+  /* pan-y, not none: a vertical swipe that happens to start here still scrolls the
+     panel. Horizontal movement is ours. */
   position:relative;height:34px;display:flex;align-items:center;
-  touch-action:pan-y;cursor:default;user-select:none;-webkit-user-select:none;
+  touch-action:pan-y;cursor:pointer;user-select:none;-webkit-user-select:none;
 }
 .sld-track,.sld-fill,.sld-bub{pointer-events:none}
 .sld-track{
@@ -3092,7 +3092,7 @@ function makeSlider(node,opt){
   const fmt=opt.fmt||(v=>String(v));
   let va = dual ? clamp(opt.value[0],min,max) : clamp(opt.value,min,max);
   let vb = dual ? clamp(opt.value[1],min,max) : 0;
-  let dragging=null, grabDx=0, api;
+  let dragging=null, grabDx=0, armed=null, api;
 
   node.innerHTML='';
   node.classList.add('sld'); if(dual) node.classList.add('dual');
@@ -3129,42 +3129,57 @@ function makeSlider(node,opt){
     v=clamp(v,min,max);
     return +v.toFixed(6);
   }
-  /* Which marker did this press land on? Only a marker starts a drag — pressing the
-     track used to jump the value straight to the finger, so on a phone every scroll
-     that happened to begin on a slider moved it. The markers carry an invisible 44px
-     hit area (and touch-action:none); the rest of the row keeps pan-y so the page
-     scrolls through it untouched. */
+  /* Tap versus drag, not marker versus track.
+     A press anywhere on the row only ARMS a drag — nothing moves yet. The drag begins
+     on the first movement past a few pixels, so a tap (or a finger that is really
+     trying to scroll the panel) never nudges the value. Land on the marker and it
+     keeps the offset you grabbed it by; land on the track and it comes to your finger
+     on that first move, which is what scrubbing should feel like. */
+  const SLOP=3;
   function thumbAt(e){
     const t=e.target;
     if(thB && (t===thB || thB.contains(t))) return 'b';
     if(t===thA || thA.contains(t)) return 'a';
     return null;
   }
+  function begin(which,fromThumb,cx){
+    dragging=which;
+    node.classList.add('is-drag');
+    if(fromThumb){
+      const tr=(which==='b'?thB:thA).getBoundingClientRect();
+      grabDx=cx-(tr.left+tr.width/2);
+    }else grabDx=0;
+  }
   function down(e){
     if(e.button!=null && e.button!==0) return;
-    const which=thumbAt(e);
-    if(!which) return;                       /* a press on the track does nothing */
+    const onThumb=thumbAt(e);
+    /* on the track of a two-handled slider, the nearer marker is the one you meant */
+    let which=onThumb;
+    if(!which && dual){
+      const v=fromX(e.clientX);
+      which = Math.abs(v-va)<=Math.abs(v-vb) ? 'a' : 'b';
+    }else if(!which) which='a';
+    armed={ which:which, onThumb:!!onThumb, x:e.clientX };
     node.setPointerCapture&&node.setPointerCapture(e.pointerId);
-    node.classList.add('is-drag');
-    dragging=which;
-    /* remember where inside the marker the finger landed, so the marker tracks the
-       finger instead of snapping its centre under it */
-    const tr=(which==='b'?thB:thA).getBoundingClientRect();
-    grabDx=e.clientX-(tr.left+tr.width/2);
-    paint();
-    e.preventDefault();
+    /* no paint, no callback: until the finger moves this is still just a tap */
   }
   function move(e){
-    if(!dragging) return;
+    if(!dragging){
+      if(!armed) return;
+      if(Math.abs(e.clientX-armed.x)<SLOP) return;   /* still a tap */
+      begin(armed.which,armed.onThumb,armed.x);
+    }
     const v=fromX(e.clientX-grabDx);
     if(dragging==='a'){ if(v===va) return; va=v; } else { if(v===vb) return; vb=v; }
     paint(); opt.onInput&&opt.onInput(api.value());
     e.preventDefault();
   }
   function up(e){
-    if(!dragging) return;
-    dragging=null; node.classList.remove('is-drag');
+    const wasDragging=!!dragging;
+    armed=null; dragging=null;
+    node.classList.remove('is-drag');
     try{ node.releasePointerCapture&&node.releasePointerCapture(e.pointerId); }catch(_){}
+    if(!wasDragging) return;                 /* a tap changed nothing to commit */
     paint(); opt.onChange&&opt.onChange(api.value());
   }
   on(node,'pointerdown',down);
