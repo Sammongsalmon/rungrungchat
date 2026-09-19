@@ -193,9 +193,19 @@
 .mv-row{padding:11px 14px;border-radius:12px;margin-bottom:3px}
 .mv-row .mr-t{font-size:13px;font-weight:650;letter-spacing:-.02em;line-height:1.35;
   overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.mv-row .mr-m{display:flex;gap:6px;align-items:baseline;margin-top:2px;font-size:10.5px;letter-spacing:-.01em}
+.mv-row .mr-m{display:flex;gap:6px;align-items:baseline;margin-top:3px;font-size:10.5px;letter-spacing:-.01em}
 .mv-row .mr-d{flex:0 0 auto;font-weight:550;font-variant-numeric:tabular-nums}
 .mv-row .mr-s{flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+/* The tag is the row's quietest line — the same slot iOS Notes gives the folder name,
+   small and grey under the title and the preview. It had no rule of its own here (the
+   chip styling was scoped to the card layout), so it inherited the shell's body size
+   and came out at 15px, louder than the 13px title, with its margin dead on an inline
+   box. */
+.mv-row .mc-tag{
+  display:inline-block;margin-top:5px;padding:1.5px 6px;border-radius:5.5px;
+  font-weight:700;letter-spacing:-.005em;line-height:1.5;vertical-align:top;
+  max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+}
 .mv-row .mr-line{height:1px;margin:11px -14px -11px 0;width:100%}
 .mv-row.sel{box-shadow:inset 0 0 0 2px currentColor}
 
@@ -211,7 +221,8 @@
 .mv-card .mc-body{font-size:10.6px;line-height:1.55;letter-spacing:-.01em;overflow:hidden}
 .mv-card .mc-tag{
   display:inline-block;margin-bottom:6px;padding:2px 7px;border-radius:6px;
-  font-size:8.9px;font-weight:700;letter-spacing:-.005em;
+  font-weight:700;letter-spacing:-.005em;
+  max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;vertical-align:top;
 }
 .mv-card .mc-pin{position:absolute;right:11px;top:11px}
 .mv-card.sel{box-shadow:inset 0 0 0 2.5px currentColor}
