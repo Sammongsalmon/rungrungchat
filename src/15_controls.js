@@ -13,7 +13,7 @@ function makeSlider(node,opt){
   const fmt=opt.fmt||(v=>String(v));
   let va = dual ? clamp(opt.value[0],min,max) : clamp(opt.value,min,max);
   let vb = dual ? clamp(opt.value[1],min,max) : 0;
-  let dragging=null, api;
+  let dragging=null, grabDx=0, api;
 
   node.innerHTML='';
   node.classList.add('sld'); if(dual) node.classList.add('dual');
@@ -50,20 +50,34 @@ function makeSlider(node,opt){
     v=clamp(v,min,max);
     return +v.toFixed(6);
   }
+  /* Which marker did this press land on? Only a marker starts a drag — pressing the
+     track used to jump the value straight to the finger, so on a phone every scroll
+     that happened to begin on a slider moved it. The markers carry an invisible 44px
+     hit area (and touch-action:none); the rest of the row keeps pan-y so the page
+     scrolls through it untouched. */
+  function thumbAt(e){
+    const t=e.target;
+    if(thB && (t===thB || thB.contains(t))) return 'b';
+    if(t===thA || thA.contains(t)) return 'a';
+    return null;
+  }
   function down(e){
     if(e.button!=null && e.button!==0) return;
+    const which=thumbAt(e);
+    if(!which) return;                       /* a press on the track does nothing */
     node.setPointerCapture&&node.setPointerCapture(e.pointerId);
     node.classList.add('is-drag');
-    const v=fromX(e.clientX);
-    if(dual) dragging = Math.abs(v-va)<=Math.abs(v-vb) ? 'a' : 'b';
-    else dragging='a';
-    if(dragging==='a') va=v; else vb=v;
-    paint(); opt.onInput&&opt.onInput(api.value());
+    dragging=which;
+    /* remember where inside the marker the finger landed, so the marker tracks the
+       finger instead of snapping its centre under it */
+    const tr=(which==='b'?thB:thA).getBoundingClientRect();
+    grabDx=e.clientX-(tr.left+tr.width/2);
+    paint();
     e.preventDefault();
   }
   function move(e){
     if(!dragging) return;
-    const v=fromX(e.clientX);
+    const v=fromX(e.clientX-grabDx);
     if(dragging==='a'){ if(v===va) return; va=v; } else { if(v===vb) return; vb=v; }
     paint(); opt.onInput&&opt.onInput(api.value());
     e.preventDefault();
