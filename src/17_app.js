@@ -145,7 +145,7 @@ function layoutDeck(animate){
 
   if(!pages.length){
     fi.style.position='static'; fi.style.transform='none'; fi.style.width='auto';
-    fo.style.width=''; fo.style.height=''; return;
+    fo.style.width=''; fo.style.height=''; area.style.minHeight=''; return;
   }
   fi.style.position='absolute';
 
@@ -155,7 +155,18 @@ function layoutDeck(animate){
   if(!ph) ph=700;
 
   if(isFlip){
-    const s=clamp(Math.min(1,(aw-90)/PV_W,(ah-24)/ph),0.2,1);
+    /* Every page is position:absolute in flip mode, so the deck carries no intrinsic
+       height. Wherever the stage row is sized to its content — the stacked phone
+       layout — that collapses the stage to its own padding, which then feeds back
+       into the scale and clips the stack at both ends. So take the budget from the
+       CSS cap rather than from the box we are about to size, and afterwards hold the
+       stage open at exactly what the stack needs. */
+    const acs=getComputedStyle(area);
+    const padY=(parseFloat(acs.paddingTop)||0)+(parseFloat(acs.paddingBottom)||0);
+    const cap=parseFloat(acs.maxHeight);
+    const budget=isFinite(cap)?Math.max(160,cap-padY):ah;
+    const s=clamp(Math.min(1,(aw-90)/PV_W,(budget-24)/ph),0.2,1);
+    area.style.minHeight=Math.ceil(ph*s+24+padY)+'px';
     /* drop any leftover strip sizing so the stack centres on the stage */
     fi.style.transform='none'; fi.style.width=''; fi.style.height='';
     fo.style.width=''; fo.style.height='';
@@ -178,6 +189,7 @@ function layoutDeck(animate){
     return;
   }
 
+  area.style.minHeight='';          /* only flip mode needs the stage propped open */
   pages.forEach(p=>{ p.style.transition=''; p.style.transform=''; p.removeAttribute('data-rel'); p.removeAttribute('data-far'); });
   const n=pages.length;
   /* Fit at most 2 boards, and only if they stay readable. Anything more scrolls

@@ -188,18 +188,18 @@
 
 /* ---------------- MEMO -------------------------------------------- */
 .mv-big{padding:4px 18px 8px}
-.mv-big h2{font-size:25px;font-weight:800;letter-spacing:-.033em;line-height:1.2}
+.mv-big h2{font-size:31px;font-weight:800;letter-spacing:-.033em;line-height:1.2}
 .mv-search{margin:4px 16px 14px;padding:8px 12px;border-radius:11px;display:flex;align-items:center;gap:7px;
-  font-size:11.2px;letter-spacing:-.01em}
-.mv-grp{padding:14px 18px 7px;font-size:10.8px;font-weight:700;letter-spacing:-.018em}
+  font-size:14px;letter-spacing:-.01em}
+.mv-grp{padding:14px 18px 7px;font-size:13.5px;font-weight:700;letter-spacing:-.018em}
 .mv-grp.first{padding-top:4px}
 
 /* list style (iOS) */
 .mv-list{padding:0 12px}
 .mv-row{padding:11px 14px;border-radius:12px;margin-bottom:3px}
-.mv-row .mr-t{font-size:12.5px;font-weight:650;letter-spacing:-.02em;line-height:1.35;
+.mv-row .mr-t{font-size:13px;font-weight:650;letter-spacing:-.02em;line-height:1.35;
   overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.mv-row .mr-m{display:flex;gap:6px;align-items:baseline;margin-top:2px;font-size:10px;letter-spacing:-.01em}
+.mv-row .mr-m{display:flex;gap:6px;align-items:baseline;margin-top:2px;font-size:10.5px;letter-spacing:-.01em}
 .mv-row .mr-d{flex:0 0 auto;font-weight:550;font-variant-numeric:tabular-nums}
 .mv-row .mr-s{flex:1 1 auto;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 .mv-row .mr-line{height:1px;margin:11px -14px -11px 0;width:100%}
@@ -209,15 +209,15 @@
 .mv-cards{padding:0 14px;display:flex;flex-direction:column;gap:11px}
 .mv-cards.g2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 .mv-card{padding:13px 14px 14px;border-radius:16px;overflow:hidden;position:relative}
-.mv-card .mc-t{font-size:9.2px;font-weight:550;margin-bottom:5px;font-variant-numeric:tabular-nums}
-.mv-card .mc-title{font-size:12px;font-weight:700;letter-spacing:-.02em;line-height:1.35;margin-bottom:3px;
+.mv-card .mc-t{font-size:9.8px;font-weight:550;margin-bottom:5px;font-variant-numeric:tabular-nums}
+.mv-card .mc-title{font-size:13px;font-weight:700;letter-spacing:-.02em;line-height:1.35;margin-bottom:3px;
   overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.mv-card .mc-sub{font-size:10.4px;line-height:1.5;letter-spacing:-.012em;margin-bottom:5px;
+.mv-card .mc-sub{font-size:10.5px;line-height:1.5;letter-spacing:-.012em;margin-bottom:5px;
   overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.mv-card .mc-body{font-size:10px;line-height:1.55;letter-spacing:-.01em;overflow:hidden}
+.mv-card .mc-body{font-size:10.6px;line-height:1.55;letter-spacing:-.01em;overflow:hidden}
 .mv-card .mc-tag{
   display:inline-block;margin-bottom:6px;padding:2px 7px;border-radius:6px;
-  font-size:8.4px;font-weight:700;letter-spacing:-.005em;
+  font-size:8.9px;font-weight:700;letter-spacing:-.005em;
 }
 .mv-card .mc-pin{position:absolute;right:11px;top:11px}
 .mv-card.sel{box-shadow:inset 0 0 0 2.5px currentColor}
@@ -228,11 +228,11 @@
 
 /* detail */
 .mv-d{padding:6px 20px 24px}
-.mv-d .md-date{font-size:9.2px;font-weight:550;text-align:center;margin-bottom:16px;letter-spacing:.005em}
+.mv-d .md-date{font-size:11.5px;font-weight:550;text-align:center;margin-bottom:16px;letter-spacing:.005em}
 .mv-d .md-tag{display:inline-block;margin-bottom:9px;padding:3px 9px;border-radius:7px;
-  font-size:9.2px;font-weight:700;letter-spacing:-.008em}
-.mv-d .md-title{font-size:17.5px;font-weight:800;letter-spacing:-.03em;line-height:1.3;margin-bottom:10px}
-.mv-d .md-body{font-size:12px;line-height:1.66;letter-spacing:-.014em;white-space:pre-wrap;word-break:break-word}
+  font-size:11.5px;font-weight:700;letter-spacing:-.008em}
+.mv-d .md-title{font-size:22px;font-weight:800;letter-spacing:-.03em;line-height:1.3;margin-bottom:10px}
+.mv-d .md-body{font-size:15px;line-height:1.66;letter-spacing:-.014em;white-space:pre-wrap;word-break:break-word}
 .mv-d .md-li{display:flex;gap:8px;margin:2px 0}
 .mv-d .md-li .li-b{flex:0 0 auto;font-weight:700;opacity:.55}
 .mv-d .md-li .li-c{flex:1 1 auto;min-width:0}

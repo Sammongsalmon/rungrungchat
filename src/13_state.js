@@ -64,14 +64,15 @@ function load(){
              memo:Object.assign(deep(MEMO_DEF),(d.theme||{}).memo||{})};
     S.themeId=d.themeId||'kakao';
     S.custom=Array.isArray(d.custom)?d.custom:[];
-    /* v4 re-scaled every memo text size to 0.8. A profile saved before that carries
-       the old sizes, so scale them once here — multiplied, not overwritten, so a size
-       the user had tuned themselves keeps its proportion. */
+    /* v4 shrank the memo HOME's entry text to 0.85 — the two size fields only the
+       home uses. A profile saved before that carries the old sizes, so scale them
+       once here. Multiplied rather than overwritten, so a size the user tuned
+       themselves keeps its proportion; every other memo size is left alone. */
     if((d.v||0)<4){
       const shrink=function(m){
         if(!m) return;
-        ['fontSize','titleSize','listTitleSize','subSize','bigSize','barSize'].forEach(function(k){
-          if(typeof m[k]==='number' && m[k]>0) m[k]=Math.round(m[k]*0.8*2)/2;
+        ['listTitleSize','subSize'].forEach(function(k){
+          if(typeof m[k]==='number' && m[k]>0) m[k]=Math.round(m[k]*0.85*2)/2;
         });
       };
       shrink(S.theme.memo);

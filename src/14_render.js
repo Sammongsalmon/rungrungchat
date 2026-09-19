@@ -309,7 +309,7 @@ function renderMemoHome(notes,opt){
 
   if(!galaxy){
     const big=el('div','mv-big'); const h=el('h2',null,title);
-    h.style.color=t.titleCol; h.style.fontSize=(t.bigSize||25)+'px';
+    h.style.color=t.titleCol; h.style.fontSize=(t.bigSize||31)+'px';
     big.appendChild(h); body.appendChild(big);
     if(t.showSearch){
       const s=el('div','mv-search');
@@ -342,14 +342,14 @@ function renderMemoHome(notes,opt){
       const tm=el('div','mc-t',memoTimeLabel(n)); tm.style.color=t.subCol; c.appendChild(tm);
       if(n.tag){ const g2=el('span','mc-tag',n.tag); g2.style.background=t.tagBg; g2.style.color=t.tagText; c.appendChild(g2); }
       const ti=el('div','mc-title rt'); ti.innerHTML=richHTML(n.title)||'제목 없음';
-      ti.style.color=t.titleCol; ti.style.fontSize=(t.listTitleSize||12.5)+'px'; c.appendChild(ti);
+      ti.style.color=t.titleCol; ti.style.fontSize=(t.listTitleSize||13)+'px'; c.appendChild(ti);
       let rest=n;
       if(n.sub){ const sb=el('div','mc-sub rt'); sb.innerHTML=richHTML(n.sub);
-                 sb.style.color=t.subCol; sb.style.fontSize=(t.subSize||10.4)+'px'; c.appendChild(sb);
+                 sb.style.color=t.subCol; sb.style.fontSize=(t.subSize||10.5)+'px'; c.appendChild(sb);
                  rest=Object.assign({},n,{body:bodyAfterSub(n)}); }
       const bd=memoBodyNode(rest,t,S.memo.style==='grid'?4:6);
       bd.classList.add('mc-body');
-      bd.style.fontSize=Math.max(8,(t.fontSize||12)*0.833)+'px'; bd.style.color=rgba(t.bodyCol,0.88);
+      bd.style.fontSize=Math.max(8,(t.fontSize-2.5)*0.85)+'px'; bd.style.color=rgba(t.bodyCol,0.88);
       c.appendChild(bd);
       if(picked){ const m=el('div','mv-selmark'); m.style.background=t.accent; m.appendChild(lineIco('check',11,readable(t.accent),3)); c.appendChild(m); }
       host.appendChild(c);
@@ -358,8 +358,8 @@ function renderMemoHome(notes,opt){
       r.dataset.note=n.id; r.dataset.u=n.id;
       r.style.background=t.cardBg; r.style.borderRadius=t.radius+'px'; r.style.color=t.accent;
       const ti=el('div','mr-t rt'); ti.innerHTML=richHTML(n.title)||'제목 없음';
-      ti.style.color=t.titleCol; ti.style.fontSize=(t.listTitleSize||12.5)+'px'; r.appendChild(ti);
-      const m=el('div','mr-m'); m.style.fontSize=(t.subSize||10)+'px';
+      ti.style.color=t.titleCol; ti.style.fontSize=(t.listTitleSize||13)+'px'; r.appendChild(ti);
+      const m=el('div','mr-m'); m.style.fontSize=(t.subSize||10.5)+'px';
       const dd=el('div','mr-d',memoShortLabel(n)); dd.style.color=t.bodyCol; m.appendChild(dd);
       const ss=el('div','mr-s rt'); ss.innerHTML=richHTML(n.sub||plain(n.body).slice(0,60))||'추가 텍스트 없음';
       ss.style.color=t.subCol; m.appendChild(ss);
@@ -396,7 +396,7 @@ function renderMemoDetail(note,blocksSlice,opt){
     const dt=el('div','md-date',memoWhenLabel(note)); dt.style.color=t.subCol; d.appendChild(dt);
     if(note.tag){ const g=el('div','md-tag',note.tag); g.style.background=t.tagBg; g.style.color=t.tagText; d.appendChild(g); }
     const ti=el('div','md-title rt'); ti.innerHTML=richHTML(note.title)||'제목 없음';
-    ti.style.color=t.titleCol; ti.style.fontSize=(t.titleSize||17.5)+'px'; d.appendChild(ti);
+    ti.style.color=t.titleCol; ti.style.fontSize=(t.titleSize||22)+'px'; d.appendChild(ti);
   }
   const fake=Object.assign({},note);
   if(blocksSlice) fake.body=blocksSlice;
