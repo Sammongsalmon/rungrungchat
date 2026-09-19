@@ -52,7 +52,10 @@ const save=debounce(function(){
 function load(){
   let d=null;
   try{ d=JSON.parse(localStorage.getItem(LSK)||'null'); }catch(e){}
-  if(!d||d.v!==3) return false;
+  /* Accept every schema we still know how to read, not one exact number: pinning it
+     to a single version meant the v4 bump silently rejected every profile the current
+     build had just saved, so nothing came back after a reload. */
+  if(!d || !(+d.v>=3)) return false;
   try{
     S.mode=d.mode==='memo'?'memo':'chat';
     S.ui=d.ui||'light';
@@ -80,7 +83,7 @@ function load(){
     }
     S.avatars=d.avatars||{};
     S.pages=Object.assign({chat:1,memo:1},d.pages);
-    S.scale=d.scale||2;
+    S.scale=(+d.scale===3)?3:2;      /* 1x was dropped — anything else means 2x */
     S.fileName=Object.assign({chat:'',memo:''},d.fileName);
     S.statusBar=d.statusBar!==false;
     S.statusTime=d.statusTime||'11:34';

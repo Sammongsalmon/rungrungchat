@@ -1319,9 +1319,8 @@ html[data-ui="dark"] .toast{color:#15171B}
             <div class="field">
               <span class="lab">해상도</span>
               <div class="choice" data-choice="scale">
-                <button class="choice-b" data-v="1">1× 표준</button>
-                <button class="choice-b is-on" data-v="2">2× 선명</button>
-                <button class="choice-b" data-v="3">3× 최고</button>
+                <button class="choice-b is-on" data-v="2">2× 표준</button>
+                <button class="choice-b" data-v="3">3× 선명</button>
               </div>
               <p class="hint" id="sizeHint"></p>
             </div>
@@ -2455,7 +2454,10 @@ const save=debounce(function(){
 function load(){
   let d=null;
   try{ d=JSON.parse(localStorage.getItem(LSK)||'null'); }catch(e){}
-  if(!d||d.v!==3) return false;
+  /* Accept every schema we still know how to read, not one exact number: pinning it
+     to a single version meant the v4 bump silently rejected every profile the current
+     build had just saved, so nothing came back after a reload. */
+  if(!d || !(+d.v>=3)) return false;
   try{
     S.mode=d.mode==='memo'?'memo':'chat';
     S.ui=d.ui||'light';
@@ -2483,7 +2485,7 @@ function load(){
     }
     S.avatars=d.avatars||{};
     S.pages=Object.assign({chat:1,memo:1},d.pages);
-    S.scale=d.scale||2;
+    S.scale=(+d.scale===3)?3:2;      /* 1x was dropped — anything else means 2x */
     S.fileName=Object.assign({chat:'',memo:''},d.fileName);
     S.statusBar=d.statusBar!==false;
     S.statusTime=d.statusTime||'11:34';
@@ -3825,7 +3827,7 @@ function paintExportOut(files){
 async function exportPNG(){
   const pages=$$('.page',$('#deck'));
   if(!pages.length){ toast('내보낼 내용이 없습니다','warn'); return; }
-  const scale=S.scale||2;
+  const scale=clamp(+S.scale||2,2,3);
   const base=exportBase();
   const wasFlip=S.flip;
   if(wasFlip){ S.flip=false; renderAll(); await new Promise(r=>setTimeout(r,60)); }

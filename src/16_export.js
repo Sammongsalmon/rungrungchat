@@ -320,7 +320,7 @@ function paintExportOut(files){
 async function exportPNG(){
   const pages=$$('.page',$('#deck'));
   if(!pages.length){ toast('내보낼 내용이 없습니다','warn'); return; }
-  const scale=S.scale||2;
+  const scale=clamp(+S.scale||2,2,3);
   const base=exportBase();
   const wasFlip=S.flip;
   if(wasFlip){ S.flip=false; renderAll(); await new Promise(r=>setTimeout(r,60)); }
