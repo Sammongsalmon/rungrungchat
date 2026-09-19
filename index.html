@@ -1762,16 +1762,29 @@ function parseMemo(src){
       const bl=body.split('\n');
       let ti=-1;
       for(let i=0;i<bl.length;i++){ if(bl[i].trim()!==''){ ti=i; break; } }
-      let title='', rest=body;
-      if(ti>=0){
-        const raw=bl[ti].trim();
-        const bold=/^\*\*([\s\S]+)\*\*$/.exec(raw) || /^<\s*(?:b|strong)\s*>([\s\S]+)<\s*\/\s*(?:b|strong)\s*>$/i.exec(raw);
-        title = bold? bold[1].trim() : raw;
-        rest = bl.slice(ti+1).join('\n').replace(/^\n+/,'');
+      const raw = ti>=0 ? bl[ti].trim() : '';
+      const bold = raw && (/^\*\*([\s\S]+)\*\*$/.exec(raw) ||
+                           /^<\s*(?:b|strong)\s*>([\s\S]+)<\s*\/\s*(?:b|strong)\s*>$/i.exec(raw));
+      /* Who names the note?
+         A bold opening line names itself — that is how the OOC memos are written, and
+         there the header's second segment is a section label, so it stays a tag.
+         Without one, the header's own segment IS the title (< 12/04 23:58 / 제목 >);
+         treating it as a tag pushed the first body line up into the title slot and
+         left the real title sitting in a chip. */
+      let title='', rest=body, sub='';
+      if(bold){
+        title = bold[1].trim();
+        rest  = bl.slice(ti+1).join('\n').replace(/^\n+/,'');
+      }else if(cur.tag){
+        title = cur.tag; cur.tag='';       /* it was the title all along */
+      }else if(ti>=0){
+        title = raw;
+        rest  = bl.slice(ti+1).join('\n').replace(/^\n+/,'');
       }
-      let sub='';
-      const rl=rest.split('\n');
-      for(let i=0;i<rl.length;i++){ if(rl[i].trim()!==''){ sub=rl[i].trim(); break; } }
+      if(rest!==body){                      /* a line was lifted out as the title */
+        const rl=rest.split('\n');
+        for(let i=0;i<rl.length;i++){ if(rl[i].trim()!==''){ sub=rl[i].trim(); break; } }
+      }
       cur.title=title; cur.body=rest; cur.sub=sub; cur.raw=body;
       notes.push(cur);
     }
