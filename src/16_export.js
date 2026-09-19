@@ -112,23 +112,46 @@ const PDEF={'background-image':'none','box-shadow':'none','text-shadow':'none','
 
 /* Does this element hold its own text, and all of it on one line?
    Anything with pre* white-space is excluded: there the line breaks ARE content. */
-function oneLineText(s){
-  let own=false;
-  for(let n=s.firstChild;n;n=n.nextSibling)
-    if(n.nodeType===3 && n.textContent.trim()){ own=true; break; }
-  if(!own) return false;
-  if(/^pre|break-spaces/.test(getComputedStyle(s).whiteSpace)) return false;
+/* If this box's text sits on ONE line in the preview, return the white-space value
+   that will keep it on one line in the clone; otherwise ''.
+
+   Two things were quietly disabling this for every chat bubble:
+   - the old guard bailed on `pre`/`pre-wrap`, and bubbles are `pre-wrap` (they have
+     to be, to keep the spacing people typed), so nothing was ever protected;
+   - it measured a range over the whole element, which also picks up absolutely
+     positioned children — the bubble's tail hangs below the last line, so every
+     tailed bubble looked multi-line too.
+   So measure the TEXT NODES, and freeze with `pre` rather than `nowrap` where
+   whitespace is significant: `nowrap` would collapse the runs of spaces people
+   actually typed. */
+function freezeLine(s){
+  const cs=getComputedStyle(s);
+  const w=document.createTreeWalker(s,NodeFilter.SHOW_TEXT,null);
   const rg=document.createRange();
-  rg.selectNodeContents(s);
-  const rects=rg.getClientRects();
-  let top=null;
-  for(let i=0;i<rects.length;i++){
-    const r=rects[i];
-    if(!r.width && !r.height) continue;
-    const t=Math.round(r.top);
-    if(top===null) top=t; else if(t!==top) return false;
+  let top=null, seen=false, n;
+  while((n=w.nextNode())){
+    if(!n.textContent.trim()) continue;
+    let skip=false;
+    for(let p=n.parentNode;p&&p!==s;p=p.parentNode){
+      const pc=getComputedStyle(p);
+      if(pc.position==='absolute'||pc.position==='fixed'||pc.float!=='none'||pc.display==='none'){ skip=true; break; }
+      if(/block|flex|grid|list-item|table/.test(pc.display)) return '';   /* a layout box, not a line */
+    }
+    if(skip) continue;
+    rg.selectNodeContents(n);
+    const rects=rg.getClientRects();
+    for(let i=0;i<rects.length;i++){
+      const r=rects[i];
+      if(!r.width && !r.height) continue;
+      const t=Math.round(r.top);
+      if(top===null) top=t; else if(t!==top) return '';
+      seen=true;
+    }
   }
-  return top!==null;
+  if(!seen || top===null) return '';
+  const ws=cs.whiteSpace;
+  if(ws==='pre'||ws==='nowrap') return ws;             /* already unwrappable */
+  return (ws==='pre-wrap'||ws==='break-spaces') ? 'pre' : 'nowrap';
 }
 
 function inlineTree(src,dst){
@@ -148,11 +171,11 @@ function inlineTree(src,dst){
        So freeze the LINE, not the box — keep the text on one line and let the box
        size to it. Dropping `width` restores exactly the flex-basis:auto sizing the
        preview itself used, so where the two agree nothing moves at all. */
-    const oneLine=oneLineText(s);
+    const freeze=freezeLine(s);
     let css='';
     for(let j=0;j<PROPS.length;j++){
       const p=PROPS[j];
-      if(oneLine && (p==='width' || p==='white-space')) continue;
+      if(freeze && (p==='width' || p==='white-space')) continue;
       /* Floor the height, don't freeze it. A pinned `height` stops a child's bottom
          margin from collapsing out of its parent, so the next sibling sits higher in
          the clone than in the preview (the memo list's rows lost their 3px gap). A
@@ -170,7 +193,7 @@ function inlineTree(src,dst){
       if(PDEF[p]!=null && v===PDEF[p]) continue;
       css+=p+':'+v+';';
     }
-    if(oneLine) css+='white-space:nowrap;';
+    if(freeze) css+='white-space:'+freeze+';';
     d.setAttribute('style',css);
     d.removeAttribute('class');
     Array.prototype.slice.call(d.attributes).forEach(function(at){
