@@ -151,13 +151,7 @@
   min-width:0;max-width:100%;
 }
 /* clip box == bubble box, so the tail's underside is the bubble's own bottom edge */
-.cv-tw{position:relative;overflow:hidden;min-width:0;max-width:100%;display:flex}
-.cv-tw.you{padding-left:11px;margin-left:-11px}
-.cv-tw.me{padding-right:11px;margin-right:-11px}
-.cv-tail{position:absolute;bottom:-4px;width:14px;height:22px;overflow:visible;pointer-events:none}
-.cv-row.you .cv-tail{left:-10px}
-.cv-row.me .cv-tail{right:-10px}
-.cv-readlabel{align-self:flex-end;margin:0 3px 2px;font-weight:600;letter-spacing:-.01em}
+.cv-row.you .cv-row.me .cv-readlabel{align-self:flex-end;margin:0 3px 2px;font-weight:600;letter-spacing:-.01em}
 .cv-row.you .cv-readlabel{align-self:flex-start}
 .cv-meta{
   flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;

@@ -242,7 +242,9 @@ function nodeToCanvas(node,scale){
       try{
         const c=document.createElement('canvas'); c.width=sw; c.height=sh;
         const x=c.getContext('2d');
-        x.fillStyle='#FFFFFF'; x.fillRect(0,0,sw,sh);
+        /* no white undercoat: the phone's rounded corners clip to nothing, and that
+           nothing should stay transparent in the PNG rather than turning into white
+           wedges on whatever the image is pasted onto */
         x.drawImage(im,0,0,sw,sh);
         res(c);
       }catch(e){ rej(e); }

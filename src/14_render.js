@@ -91,12 +91,6 @@ function topBar(t,opt){
                       cuts the bottom edge, not the path's own antialiasing
    The clip box is the bubble's box, which is why the underside lands on exactly the
    same pixel row as the bubble's background at any device ratio. */
-function tailSvg(dir,col){
-  const p = dir==='you'
-    ? 'M14 6.1 L4.86 15.82 Q2.8 18 5.8 18 L5.8 21 L14 21 Z'
-    : 'M0 6.1 L9.14 15.82 Q11.2 18 8.2 18 L8.2 21 L0 21 Z';
-  return svgTag(14,22,'cv-tail','<path d="'+p+'" fill="'+col+'"/>');
-}
 function avatarNode(name,t){
   const a=avatarFor(name);
   const n=el('div','cv-av');
@@ -182,13 +176,13 @@ function renderChatPage(units,opt){
     const isLast = !nxt || nxt.gi!==u.gi || (nxt.who===S.chat.me)!==mine;
 
     if(t.tail && isLast){
-      /* flatten the corner the tail meets so the bubble edge is straight there */
-      const flat=Math.min(3,t.radius)+'px';
-      if(mine) bub.style.borderBottomRightRadius=flat; else bub.style.borderBottomLeftRadius=flat;
-      bub.appendChild(tailSvg(mine?'me':'you', mine?t.meBg:t.youBg));
-      const tw=el('div','cv-tw '+(mine?'me':'you'));
-      tw.appendChild(bub);
-      bubHost=tw;
+      /* The tail is the corner itself, sharpened — no triangle stuck on the side.
+         The last bubble of a run squares off the corner nearest its speaker, which
+         reads as "this one is pointing at me" without adding a shape that has to be
+         aligned, clipped and re-aligned at every device pixel ratio. */
+      const sharp=Math.min(3,t.radius)+'px';
+      if(mine) bub.style.borderBottomRightRadius=sharp;
+      else     bub.style.borderBottomLeftRadius=sharp;
     }
     line.appendChild(bubHost);
 
