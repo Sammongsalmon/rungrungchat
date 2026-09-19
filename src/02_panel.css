@@ -145,6 +145,10 @@ html[data-ui="dark"] .chip.is-on{color:#15171B}
 .choice-b:hover{color:var(--text-2)}
 .choice-b.is-on{background:var(--surface);color:var(--text);box-shadow:var(--sh-2)}
 html[data-ui="dark"] .choice-b.is-on{background:var(--surface-3)}
+/* Some choices need their full wording to be readable — let those wrap to a grid
+   instead of clipping every label to "보낸사람·시…". */
+.choice.wrap{flex-wrap:wrap}
+.choice.wrap .choice-b{flex:1 1 44%;white-space:normal;text-overflow:clip;line-height:1.35}
 
 /* switch ----------------------------------------------------------- */
 .sw-row{display:flex;align-items:center;gap:10px;padding:9px 0;cursor:pointer}

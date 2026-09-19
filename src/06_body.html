@@ -58,6 +58,25 @@
               <button class="btn sm ink-btn" id="btnParse" data-ico-pre="wand">다시 분석</button>
             </div>
             <div id="parseStat" style="margin-top:10px"></div>
+            <div class="field" data-only="chat" style="margin-top:12px">
+              <span class="lab">머리글 읽는 순서</span>
+              <div class="choice wrap" data-choice="headOrder">
+                <button class="choice-b is-on" data-v="auto">자동</button>
+                <button class="choice-b" data-v="wtr">보낸사람·시간·받는사람</button>
+                <button class="choice-b" data-v="wrt">보낸사람·받는사람·시간</button>
+                <button class="choice-b" data-v="trw">시간·받는사람·보낸사람</button>
+              </div>
+              <p class="hint" id="headOrderHint"></p>
+            </div>
+            <div class="field" data-only="memo" style="margin-top:12px">
+              <span class="lab">머리글 읽는 순서</span>
+              <div class="choice wrap" data-choice="memoHeadOrder">
+                <button class="choice-b is-on" data-v="auto">자동</button>
+                <button class="choice-b" data-v="dt">날짜·시간 먼저</button>
+                <button class="choice-b" data-v="td">제목 먼저</button>
+              </div>
+              <p class="hint" id="memoHeadOrderHint"></p>
+            </div>
           </div>
 
           <hr class="hr">

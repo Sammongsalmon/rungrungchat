@@ -303,6 +303,28 @@ function flipTo(i){
 /* ============================================================
    PARSE PIPELINE
    ============================================================ */
+/* Names edited by hand have to move their message into the right room, the same way
+   the parser assigns one: a room is the whole set of people on the header. */
+function retagRooms(){
+  const map={}, rooms=[], seen={};
+  S.chat.units.forEach(function(u){
+    const all=[u.who].concat((u.tos&&u.tos.length)?u.tos:[u.to]);
+    const uniq=[]; all.forEach(function(n){ if(n && uniq.indexOf(n)<0) uniq.push(n); });
+    const key=uniq.slice().sort().join('\u0001');
+    if(map[key]==null){ map[key]=rooms.length; rooms.push({key:key,names:uniq.slice(),n:0,group:uniq.length>2}); }
+    u.room=map[key]; rooms[u.room].n++;
+    uniq.forEach(function(n){ seen[n]=(seen[n]||0)+1; });
+  });
+  S.chat.rooms=rooms;
+  S.chat.room=clamp(S.chat.room,0,Math.max(0,rooms.length-1));
+  if(!S.chat.me || participants().indexOf(S.chat.me)<0){
+    let me='', best=-1;
+    Object.keys(seen).forEach(function(k){ if(seen[k]>best){best=seen[k];me=k;} });
+    S.chat.me=me;
+  }
+  paintMeSelect(); paintRoomChips();
+}
+
 function reparse(keepEdits){
   const raw=curRaw();
   if(S.mode==='chat'){
@@ -344,12 +366,12 @@ function paintParseStat(){
   if(!curRaw().trim()){ n.innerHTML=''; return; }
   if(S.mode==='chat'){
     const u=S.chat.units.length, r=S.chat.rooms.length;
-    if(!u){ n.className='stat warn'; n.innerHTML=ico('warn',16)+'<span>채팅 형식을 찾지 못했습니다. <b>&lt; 보낸사람 : … / 발신시간 : … / 받는사람 : … &gt;</b> 머리글이 있는지 확인해 주세요.</span>'; return; }
+    if(!u){ n.className='stat warn'; n.innerHTML=ico('warn',16)+'<span>채팅 형식을 찾지 못했습니다. <b>&lt; 보낸사람 / 시간 / 받는사람 &gt;</b> 머리글이 있는지 확인해 주세요. 라벨과 띄어쓰기는 없어도 되고, 순서가 다르면 아래 <b>머리글 읽는 순서</b>에서 직접 지정할 수 있습니다.</span>'; return; }
     n.className='stat ok';
     n.innerHTML=ico('check',16)+'<span>말풍선 <b>'+u+'개</b> · 대화방 <b>'+r+'개</b> · 인물 <b>'+participants().length+'명</b></span>';
   }else{
     const m=S.memo.notes.length;
-    if(!m){ n.className='stat warn'; n.innerHTML=ico('warn',16)+'<span>메모 형식을 찾지 못했습니다. <b>&lt; 06/02 03:41 / 제목 &gt;</b> 형태의 머리글이 필요합니다.</span>'; return; }
+    if(!m){ n.className='stat warn'; n.innerHTML=ico('warn',16)+'<span>메모 형식을 찾지 못했습니다. <b>&lt; 06/02 03:41 / 제목 &gt;</b> 형태의 머리글이 필요합니다. 라벨과 띄어쓰기는 없어도 되고, 순서가 다르면 아래 <b>머리글 읽는 순서</b>에서 직접 지정할 수 있습니다.</span>'; return; }
     n.className='stat ok';
     n.innerHTML=ico('check',16)+'<span>메모 <b>'+m+'개</b>를 찾았습니다</span>';
   }

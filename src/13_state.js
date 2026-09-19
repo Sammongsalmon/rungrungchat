@@ -20,6 +20,7 @@ const S={
   fileName:{chat:'',memo:''},
   flip:false, flipIdx:0, statusBar:true, statusTime:'11:34',
   statusAuto:true, statusSkew:0,
+  headOrder:'auto', memoHeadOrder:'auto',
   panelW:428, stageH:0, thFold:false, mixFold:false, thFilter:'기본',
   mixer:null,
   _dirty:0
@@ -34,6 +35,7 @@ function snap(){
     avatars:S.avatars, pages:S.pages, scale:S.scale, frameR:S.frameR, fileName:S.fileName,
     statusBar:S.statusBar, statusTime:S.statusTime,
     statusAuto:S.statusAuto, statusSkew:S.statusSkew,
+    headOrder:S.headOrder, memoHeadOrder:S.memoHeadOrder,
     panelW:S.panelW, stageH:S.stageH, thFold:S.thFold, mixFold:S.mixFold, thFilter:S.thFilter,
     mixer:S.mixer, at:Date.now()
   };
@@ -92,6 +94,8 @@ function load(){
     S.statusTime=d.statusTime||'11:34';
     S.statusAuto=d.statusAuto!==false;
     S.statusSkew=+d.statusSkew||0;
+    S.headOrder=/^(auto|wtr|wrt|trw)$/.test(d.headOrder)?d.headOrder:'auto';
+    S.memoHeadOrder=/^(auto|dt|td)$/.test(d.memoHeadOrder)?d.memoHeadOrder:'auto';
     S.panelW=d.panelW||428; S.stageH=d.stageH||0; S.thFold=!!d.thFold; S.mixFold=!!d.mixFold;
     S.thFilter=d.thFilter||'기본'; S.mixer=d.mixer||null;
     lastSave=d.at||0;

@@ -141,6 +141,16 @@ function wire(){
 
   /* memo options */
   bindText($('#memoTitle'),()=>S.memo.appTitle,function(v){ S.memo.appTitle=v; renderSoon(); save(); });
+  /* Header order. Auto reads the labels first and falls back to position; when a log
+     uses an order we guess wrong, this pins it and the text is parsed again. */
+  function afterHeadOrder(){
+    paintHeadOrder(); reparse(false);
+    paintParseStat(); paintMeSelect(); paintRoomChips();
+    paintEditList(); paintRangeUI(); renderAll(); save();
+  }
+  bindChoice('headOrder',()=>S.headOrder,function(v){ S.headOrder=v; afterHeadOrder(); });
+  bindChoice('memoHeadOrder',()=>S.memoHeadOrder,function(v){ S.memoHeadOrder=v; afterHeadOrder(); });
+  paintHeadOrder();
   bindChoice('memoStyle',()=>S.memo.style,function(v){ S.memo.style=v; paintMemoClip(); renderAll(); });
   paintMemoClip();
   bindChoice('memoGroup',()=>S.memo.group,function(v){ S.memo.group=v; renderAll(); });
