@@ -103,7 +103,10 @@ function avatarNode(name,t){
   const sz=t.avatarSize||38;
   n.style.width=sz+'px'; n.style.height=sz+'px'; n.style.fontSize=Math.round(sz*0.4)+'px';
   n.style.borderRadius=(t.avatarR>=50?'50%':t.avatarR+'px');
-  if(a.img){ n.style.backgroundImage='url("'+a.img+'")'; }
+  if(a.img){
+    n.style.backgroundImage='url("'+a.img+'")';
+    n.style.backgroundSize=a.crop.size; n.style.backgroundPosition=a.crop.pos;
+  }
   else {
     n.style.background=a.col;
     if(t.avatarText!==false){ n.textContent=a.ini; n.style.color=a.txt; }

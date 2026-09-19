@@ -341,6 +341,132 @@ function autoGradFor(t){
   const accent = S.mode==='chat' ? t.meBg : t.accent;
   return autoGrad(t.bg1, accent, lum(t.bg1)<0.42);
 }
+/* ------------------------------------------------------------
+   photo crop sheet — finger, mouse and numbers all drive the same three values
+   ------------------------------------------------------------ */
+function openCrop(name){
+  const a=S.avatars[name]||{};
+  if(!a.img){ toast('먼저 사진을 넣어 주세요','warn'); return; }
+  const before=cropOf(a);
+  let cur=cropOf(a);
+
+  const bg=$('#sheetBg'), sh=$('#sheet');
+  sh.innerHTML='';
+  sh.appendChild(el('h3',null,name+' 사진 편집'));
+
+  const wrap=el('div','crop-wrap');
+  const fr=el('div','crop-fr');
+  const im=el('div','crop-im');
+  im.style.backgroundImage='url("'+a.img+'")';
+  fr.appendChild(im); wrap.appendChild(fr);
+  const hint=el('p','crop-hint');
+  hint.innerHTML='끌어서 위치를 옮기고, 두 손가락으로 오므리거나 벌려 확대합니다. 마우스는 휠로 확대됩니다.';
+  wrap.appendChild(hint);
+  sh.appendChild(wrap);
+
+  /* the frame mirrors the avatar's own corner rounding, so what you see is what
+     lands in the bubble list */
+  const shape=function(){
+    const t=S.theme.chat;
+    fr.style.borderRadius = (t.avatarR>=50?'50%':Math.round(t.avatarR*2.2)+'px');
+  };
+  shape();
+
+  const paint=function(){
+    const c=cropCss(cur);
+    im.style.backgroundSize=c.size; im.style.backgroundPosition=c.pos;
+  };
+  paint();
+
+  /* ---- sliders: the same three values, typed rather than dragged ---- */
+  const sz=sldPlain('확대',()=>cur.zoom,function(v){ cur.zoom=v; },1,4,0.05,'x',
+    function(){ paint(); }, function(){ paint(); });
+  const sx=sldPlain('가로 위치',()=>cur.px,function(v){ cur.px=v; },0,100,1,'%',
+    function(){ paint(); }, function(){ paint(); });
+  const sy=sldPlain('세로 위치',()=>cur.py,function(v){ cur.py=v; },0,100,1,'%',
+    function(){ paint(); }, function(){ paint(); });
+  sh.appendChild(sz); sh.appendChild(sx); sh.appendChild(sy);
+  const syncSliders=function(){
+    [sz,sx,sy].forEach(function(f){ if(f._sync) f._sync(); });
+  };
+
+  /* ---- gestures: one pointer pans, two pinch, wheel zooms ---- */
+  const pts=new Map();
+  let base=null;
+  const frame=()=>fr.getBoundingClientRect().width||1;
+  /* Panning is expressed in the overflow, not in pixels: dragging by d px moves the
+     position by d/overflow of its whole range. Where an axis has no overflow there is
+     nothing to pan, and the value is left alone instead of jumping. */
+  const panBy=function(dx,dy,from){
+    const F=frame(), ov=cropOverflow(cur,F);
+    if(ov.x>0.5) cur.px=clamp(from.px-dx/ov.x*100,0,100);
+    if(ov.y>0.5) cur.py=clamp(from.py-dy/ov.y*100,0,100);
+  };
+  const zoomTo=function(z){ cur.zoom=clamp(z,1,4); };
+
+  on(fr,'pointerdown',function(e){
+    fr.setPointerCapture(e.pointerId);
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    fr.classList.add('is-drag');
+    base={ px:cur.px, py:cur.py, zoom:cur.zoom,
+           pts:Array.from(pts.values()).map(function(p){ return {x:p.x,y:p.y}; }) };
+    e.preventDefault();
+  });
+  on(fr,'pointermove',function(e){
+    if(!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    const now=Array.from(pts.values());
+    if(now.length>=2 && base && base.pts.length>=2){
+      const d0=Math.hypot(base.pts[0].x-base.pts[1].x, base.pts[0].y-base.pts[1].y);
+      const d1=Math.hypot(now[0].x-now[1].x, now[0].y-now[1].y);
+      if(d0>4) zoomTo(base.zoom*(d1/d0));
+      const c0={x:(base.pts[0].x+base.pts[1].x)/2,y:(base.pts[0].y+base.pts[1].y)/2};
+      const c1={x:(now[0].x+now[1].x)/2,y:(now[0].y+now[1].y)/2};
+      panBy(c1.x-c0.x, c1.y-c0.y, base);
+    }else if(base){
+      panBy(e.clientX-base.pts[0].x, e.clientY-base.pts[0].y, base);
+    }
+    paint();
+    e.preventDefault();
+  });
+  const release=function(e){
+    if(!pts.has(e.pointerId)) return;
+    pts.delete(e.pointerId);
+    if(!pts.size){ fr.classList.remove('is-drag'); base=null; }
+    else base={ px:cur.px, py:cur.py, zoom:cur.zoom,
+                pts:Array.from(pts.values()).map(function(p){ return {x:p.x,y:p.y}; }) };
+    syncSliders();
+  };
+  on(fr,'pointerup',release); on(fr,'pointercancel',release);
+  on(fr,'wheel',function(e){
+    e.preventDefault();
+    zoomTo(cur.zoom*(e.deltaY<0?1.08:1/1.08));
+    paint(); syncSliders();
+  });
+
+  /* ---- actions ---- */
+  const acts=el('div','sheet-acts');
+  const rs=el('button','btn','초기화');
+  on(rs,'click',function(){ cur={zoom:1,px:50,py:50,ar:cur.ar}; paint(); syncSliders(); });
+  const no=el('button','btn','취소');
+  on(no,'click',function(){
+    cur=before; bg.classList.remove('is-on');
+  });
+  const ok=el('button','btn ink-btn','적용');
+  on(ok,'click',function(){
+    S.avatars[name]=Object.assign({},S.avatars[name],
+      {zoom:cur.zoom, px:cur.px, py:cur.py, ar:cur.ar});
+    bg.classList.remove('is-on');
+    renderAll(); save(); paintThemeEditor(true);
+    toast(name+' 사진을 다듬었습니다');
+  });
+  acts.appendChild(rs); acts.appendChild(no); acts.appendChild(ok);
+  sh.appendChild(acts);
+
+  bg.classList.add('is-on');
+  bg.onclick=function(e){ if(e.target===bg) bg.classList.remove('is-on'); };
+}
+
 /* Profile sits at the top of 직접 꾸미기: it is the thing people reach for first, and
    it is per-person rather than per-surface, so it does not belong among the surface
    folds further down. */
@@ -377,13 +503,21 @@ function avatarFold(){
     const pk=el('button','btn sm');
     pk.innerHTML=ico('image',15)+(a.img?'사진 바꾸기':'사진 넣기');
     on(pk,'click',function(){
-      pickImage(320,function(d){
-        S.avatars[p]=Object.assign({},S.avatars[p],{img:d});
+      pickImage(320,function(d,w,h){
+        /* a fresh photo starts uncropped, and goes straight into the editor —
+           that is the moment people want to frame it */
+        S.avatars[p]=Object.assign({},S.avatars[p],
+          {img:d, ar:(w&&h)?w/h:1, zoom:1, px:50, py:50});
         renderAll(); save(); paintThemeEditor(true);
+        openCrop(p);
       });
     });
     row.appendChild(pk);
     if(a.img){
+      const ed=el('button','btn sm');
+      ed.innerHTML=ico('search',15)+'확대·위치';
+      on(ed,'click',function(){ openCrop(p); });
+      row.appendChild(ed);
       const rm=el('button','btn sm ghost danger','사진 제거');
       on(rm,'click',function(){
         if(S.avatars[p]) delete S.avatars[p].img;

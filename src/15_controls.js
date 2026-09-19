@@ -430,11 +430,38 @@ function shrink(dataUrl,maxPx,cb){
     let out;
     try{ out=c.toDataURL('image/webp',0.86); if(out.indexOf('image/webp')<0) throw 0; }
     catch(e){ out=c.toDataURL('image/jpeg',0.88); }
-    cb(out);
+    cb(out,w,h);                 /* the aspect is what a square crop frame needs */
   };
   im.onerror=function(){ toast('이미지를 읽지 못했습니다','warn'); };
   im.src=dataUrl;
 }
+/* ------------------------------------------------------------
+   avatar photo crop
+   The transform is stored, never baked into the pixels: three numbers instead of a
+   re-encoded image, and it stays re-editable. The avatar frame is square, so "cover"
+   means the image's SHORT side fills it — zoom multiplies that side, and
+   background-position's percentages then pan across exactly the overflow. All of it
+   is resolution-independent, so the same numbers hold at 1x and at export 3x.
+   ------------------------------------------------------------ */
+function cropOf(a){
+  a=a||{};
+  return { zoom:Math.max(1,+a.zoom||1),
+           px:(a.px==null?50:clamp(+a.px,0,100)),
+           py:(a.py==null?50:clamp(+a.py,0,100)),
+           ar:(+a.ar>0?+a.ar:1) };
+}
+function cropCss(c){
+  const z=Math.max(1,c.zoom||1), ar=c.ar||1;
+  return { size: ar>=1 ? 'auto '+(z*100)+'%' : (z*100)+'% auto',
+           pos : clamp(c.px,0,100)+'% '+clamp(c.py,0,100)+'%' };
+}
+/* how much of the image hangs outside a square frame of side F, per axis (px) */
+function cropOverflow(c,F){
+  const z=Math.max(1,c.zoom||1), ar=c.ar||1;
+  return ar>=1 ? { x:F*(z*ar-1), y:F*(z-1) }
+               : { x:F*(z-1),    y:F*(z/ar-1) };
+}
+
 function downloadBlob(blob,name){
   const u=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=u; a.download=name;

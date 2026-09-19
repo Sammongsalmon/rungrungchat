@@ -154,7 +154,8 @@ function avatarFor(name){
   const a=S.avatars[name]||{};
   const col=a.col||themeAvatarCol(name);
   return { img:a.img||'', col:col, ini:(String(name||'?').trim()[0]||'?'),
-           txt:ensure(readable(col),col,4.5), custom:!!a.col };
+           txt:ensure(readable(col),col,4.5), custom:!!a.col,
+           crop:cropCss(cropOf(a)) };
 }
 function participants(){
   const set={}, out=[];
