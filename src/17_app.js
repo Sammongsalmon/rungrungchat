@@ -244,6 +244,8 @@ function renderAll(){
   const keepT=area?area.scrollTop:0, keepL=area?area.scrollLeft:0;
   try{
     const n=buildDeck();
+    /* the tiles are in the document now, so they can be measured and fitted */
+    fitGridTiles($('#deck'));
     S.flipIdx=clamp(S.flipIdx,0,Math.max(0,n-1));
     layoutDeck(false);
     paintStageFoot(n);

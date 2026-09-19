@@ -989,6 +989,11 @@ html[data-ui="dark"] .toast{color:#15171B}
   font-weight:700;letter-spacing:-.005em;
   max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;vertical-align:top;
 }
+/* A 2-up tile shows the title in full, wrapping as far as it needs — it is the one
+   thing on the tile you cannot guess from a preview. The one-column card keeps its
+   single-line ellipsis. When a title is long enough to eat the whole square,
+   fitGridTiles() puts a clamp back on it. */
+.mv-cards.g2 .mv-card .mc-title{white-space:normal;overflow:visible;text-overflow:clip}
 .mv-card .mc-pin{position:absolute;right:11px;top:11px}
 .mv-card.sel{box-shadow:inset 0 0 0 2.5px currentColor}
 .mv-selmark{
@@ -3171,6 +3176,78 @@ function memoBodyNode(note,t,limit){
 
 /* toggle a card's picked state in place — rebuilding the deck for every tap
    throws away scroll position and flashes the whole preview */
+/* ------------------------------------------------------------------------------
+   Fitting a 2-up grid tile.
+
+   The tile is a fixed square with overflow hidden, so everything inside it competes
+   for one known height. The old rule — a -webkit-line-clamp of 6 on the body — knew
+   nothing about that square: it counts block children, so a couple of list items that
+   wrapped already ran past the bottom edge, and the tile sliced them mid-glyph with
+   nothing to show that anything had been left out.
+
+   So measure. Give the title every line it wants, take what is left for the body, and
+   put the ellipsis on the exact line where the tile ends.
+
+   All of this works in offsetTop/offsetHeight, never getBoundingClientRect: the deck
+   carries a scale transform from layoutDeck(), which rects report and offsets do not.
+   ------------------------------------------------------------------------------ */
+function lineH(n){
+  const cs=getComputedStyle(n);
+  let lh=parseFloat(cs.lineHeight);
+  if(!isFinite(lh)||!lh) lh=(parseFloat(cs.fontSize)||11)*1.4;
+  return lh;
+}
+function clampLines(n,lines){
+  n.style.display='-webkit-box';
+  n.style.webkitBoxOrient='vertical';
+  n.style.webkitLineClamp=String(Math.max(1,lines));
+  n.style.overflow='hidden';
+}
+
+/* Cut a stack of blocks off at `bottom`, ending on a real line with an ellipsis. */
+function fitBlocks(box,bottom){
+  const kids=[].slice.call(box.children);
+  for(let i=0;i<kids.length;i++){
+    const k=kids[i];
+    /* read fresh every time: clamping one child moves the ones after it up */
+    const room=bottom-k.offsetTop;
+    const lh=lineH(k);
+    if(room < lh*0.92){ k.style.display='none'; continue; }
+    if(k.offsetHeight <= room+0.5) continue;        /* fits whole */
+    /* a list item is a flex row — the text that has to shrink is the content cell */
+    const target=k.classList.contains('md-li') ? ($('.li-c',k)||k) : k;
+    clampLines(target, Math.floor(room/lineH(target)));
+  }
+}
+
+function fitGridTile(card){
+  const ti=$('.mc-title',card), bd=$('.mc-body',card);
+  const cs=getComputedStyle(card);
+  /* no borders on a tile, so offsetTop and clientHeight share an origin */
+  const bottom=card.clientHeight-(parseFloat(cs.paddingBottom)||0);
+  if(!(bottom>0)) return;
+
+  if(ti && bd){
+    const tLH=lineH(ti);
+    /* whatever sits between the title and the body (its own margin, the sub line)
+       keeps its height however the title is clamped, so measure it once */
+    const between=(bd.offsetTop-ti.offsetTop)-ti.offsetHeight;
+    const keepOneLine=bd.children.length?lineH(bd):0;
+    const maxH=Math.max(tLH, bottom-ti.offsetTop-between-keepOneLine);
+    if(ti.offsetHeight > maxH+0.5) clampLines(ti, Math.floor(maxH/tLH));
+  }else if(ti){
+    const tLH=lineH(ti);
+    const maxH=Math.max(tLH, bottom-ti.offsetTop);
+    if(ti.offsetHeight > maxH+0.5) clampLines(ti, Math.floor(maxH/tLH));
+  }
+  if(bd && bd.children.length) fitBlocks(bd, bottom);
+}
+
+/* Run over a freshly built deck. Only the clipped 2-up tiles have a height to fit. */
+function fitGridTiles(root){
+  $$('.mv-cards.g2.is-clip .mv-card', root||document).forEach(fitGridTile);
+}
+
 /* The tag sits a step below the preview, and follows the theme rather than a fixed
    pixel size (0.85 x the sub size is the 8.9px the card layout always used). */
 function tagSize(t){ return Math.max(7, Math.round((t.subSize||10.5)*0.85*10)/10); }
@@ -3258,10 +3335,15 @@ function renderMemoHome(notes,opt){
       const grid=S.memo.style==='grid';
       const bd=memoBodyNode(rest,t,S.memo.clip?0:(grid?4:6));
       bd.classList.add('mc-body');
-      if(S.memo.clip){
+      /* The 2-up tile is a fixed square, so what fits inside it is a question of
+         HEIGHT, not of counting blocks — a clamp of 6 counts six block children, and
+         two of those wrapping is already past the bottom edge. fitGridTiles() measures
+         the square instead. The one-column card has no fixed height, so two lines is
+         still exactly the right rule there. */
+      if(S.memo.clip && !grid){
         bd.style.display='-webkit-box';
         bd.style.webkitBoxOrient='vertical';
-        bd.style.webkitLineClamp=grid?'6':'2';
+        bd.style.webkitLineClamp='2';
         bd.style.overflow='hidden';
       }
       bd.style.fontSize=Math.max(8,(t.fontSize-2.5)*0.85)+'px'; bd.style.color=rgba(t.bodyCol,0.88);
@@ -4460,6 +4542,8 @@ function renderAll(){
   const keepT=area?area.scrollTop:0, keepL=area?area.scrollLeft:0;
   try{
     const n=buildDeck();
+    /* the tiles are in the document now, so they can be measured and fitted */
+    fitGridTiles($('#deck'));
     S.flipIdx=clamp(S.flipIdx,0,Math.max(0,n-1));
     layoutDeck(false);
     paintStageFoot(n);
