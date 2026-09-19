@@ -1197,6 +1197,7 @@ html[data-ui="dark"] .toast{color:#15171B}
                 <button class="choice-b" data-v="grid">2단 그리드</button>
               </div>
             </div>
+            <div class="field" id="memoClipField"></div>
             <div class="field">
               <span class="lab">날짜 그룹</span>
               <div class="choice" id="memoGroup" data-choice="memoGroup">
@@ -2428,7 +2429,7 @@ const S={
   v:3, mode:'chat', ui:'light',
   raw:{chat:'',memo:''},
   chat:{ units:[], rooms:[], room:0, roomMode:'one', me:'', roomName:'', dateLine:'' },
-  memo:{ notes:[], style:'list', group:'month', sort:'raw', appTitle:'', sel:[], open:-1, pick:false, exportWhat:'home' },
+  memo:{ notes:[], style:'list', clip:false, group:'month', sort:'raw', appTitle:'', sel:[], open:-1, pick:false, exportWhat:'home' },
   range:{chat:[1,1], memo:[1,1]},
   theme:{ chat:deep(CHAT_DEF), memo:deep(MEMO_DEF) },
   themeId:'kakao',
@@ -3002,7 +3003,7 @@ function renderMemoHome(notes,opt){
       host=null; lastG=g;
     }
     if(!host){
-      host=el('div', galaxy? ('mv-cards'+(S.memo.style==='grid'?' g2':'')) : 'mv-list');
+      host=el('div', galaxy? ('mv-cards'+(S.memo.style==='grid'?' g2':'')+(S.memo.clip?' is-clip':'')) : 'mv-list');
       body.appendChild(host);
     }
     const picked=!EXPORTING && S.memo.pick && S.memo.sel.indexOf(n.id)>=0;
@@ -3019,8 +3020,20 @@ function renderMemoHome(notes,opt){
       if(n.sub){ const sb=el('div','mc-sub rt'); sb.innerHTML=richHTML(n.sub);
                  sb.style.color=t.subCol; sb.style.fontSize=(t.subSize||10.5)+'px'; c.appendChild(sb);
                  rest=Object.assign({},n,{body:bodyAfterSub(n)}); }
-      const bd=memoBodyNode(rest,t,S.memo.style==='grid'?4:6);
+      const lines=S.memo.style==='grid'?4:6;
+      /* Off: keep the old block cap — it trims to whole paragraphs, quietly.
+         On: hand over EVERY block and let the line clamp do the cutting, because that
+         is what draws the ellipsis. Capping blocks first would drop the tail with no
+         sign that anything was left out, and a single long paragraph would still run
+         past the others. */
+      const bd=memoBodyNode(rest,t,S.memo.clip?0:lines);
       bd.classList.add('mc-body');
+      if(S.memo.clip){
+        bd.style.display='-webkit-box';
+        bd.style.webkitBoxOrient='vertical';
+        bd.style.webkitLineClamp=String(lines);
+        bd.style.overflow='hidden';
+      }
       bd.style.fontSize=Math.max(8,(t.fontSize-2.5)*0.85)+'px'; bd.style.color=rgba(t.bodyCol,0.88);
       c.appendChild(bd);
       if(picked){ const m=el('div','mv-selmark'); m.style.background=t.accent; m.appendChild(lineIco('check',11,readable(t.accent),3)); c.appendChild(m); }
@@ -4180,6 +4193,21 @@ function layoutDeck(animate){
    MASTER RENDER
    ============================================================ */
 let renderLock=false;
+/* With the clamp on, every card shows the same number of lines at most — but a card
+   with two lines is still shorter than one with six. Level them to the tallest on the
+   same page so the grid reads as a grid. Measured after layout, because that is the
+   only moment the real heights exist. */
+function equalizeMemoCards(){
+  $$('#deck .mv-cards.is-clip').forEach(function(host){
+    const cards=$$('.mv-card',host);
+    if(cards.length<2) return;
+    cards.forEach(function(c){ c.style.minHeight=''; });
+    let tall=0;
+    cards.forEach(function(c){ tall=Math.max(tall,c.offsetHeight); });
+    if(tall>0) cards.forEach(function(c){ c.style.minHeight=tall+'px'; });
+  });
+}
+
 function renderAll(){
   if(renderLock) return;
   renderLock=true;
@@ -4187,6 +4215,7 @@ function renderAll(){
   const keepT=area?area.scrollTop:0, keepL=area?area.scrollLeft:0;
   try{
     const n=buildDeck();
+    equalizeMemoCards();
     S.flipIdx=clamp(S.flipIdx,0,Math.max(0,n-1));
     layoutDeck(false);
     paintStageFoot(n);
@@ -5483,7 +5512,8 @@ function wire(){
 
   /* memo options */
   bindText($('#memoTitle'),()=>S.memo.appTitle,function(v){ S.memo.appTitle=v; renderSoon(); save(); });
-  bindChoice('memoStyle',()=>S.memo.style,function(v){ S.memo.style=v; renderAll(); });
+  bindChoice('memoStyle',()=>S.memo.style,function(v){ S.memo.style=v; paintMemoClip(); renderAll(); });
+  paintMemoClip();
   bindChoice('memoGroup',()=>S.memo.group,function(v){ S.memo.group=v; renderAll(); });
   bindChoice('memoSort',()=>S.memo.sort,function(v){ S.memo.sort=v; S.memo.open=-1; paintEditList(); paintRangeUI(); renderAll(); });
   bindChoice('memoExport',()=>S.memo.exportWhat,function(v){
@@ -5699,6 +5729,19 @@ function paintClockRow(){
   });
   row.appendChild(i);
   if(hint) hint.textContent='적은 시각을 그대로 씁니다.';
+}
+
+/* Only the card layouts can overflow — the iOS list is one line per row already —
+   so the switch only appears where it does something. */
+function paintMemoClip(){
+  const f=$('#memoClipField'); if(!f) return;
+  const shown=S.memo.style!=='list';
+  f.style.display=shown?'':'none';
+  if(!shown || f.childNodes.length) return;
+  f.appendChild(switchRow('카드 높이 맞추기',
+    '카드를 같은 높이로 맞추고, 넘치는 내용은 …으로 줄입니다',
+    ()=>!!S.memo.clip,
+    function(v){ S.memo.clip=v; renderAll(); save(); }));
 }
 
 function bindGrips(){

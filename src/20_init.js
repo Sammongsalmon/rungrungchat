@@ -131,7 +131,8 @@ function wire(){
 
   /* memo options */
   bindText($('#memoTitle'),()=>S.memo.appTitle,function(v){ S.memo.appTitle=v; renderSoon(); save(); });
-  bindChoice('memoStyle',()=>S.memo.style,function(v){ S.memo.style=v; renderAll(); });
+  bindChoice('memoStyle',()=>S.memo.style,function(v){ S.memo.style=v; paintMemoClip(); renderAll(); });
+  paintMemoClip();
   bindChoice('memoGroup',()=>S.memo.group,function(v){ S.memo.group=v; renderAll(); });
   bindChoice('memoSort',()=>S.memo.sort,function(v){ S.memo.sort=v; S.memo.open=-1; paintEditList(); paintRangeUI(); renderAll(); });
   bindChoice('memoExport',()=>S.memo.exportWhat,function(v){
@@ -347,6 +348,19 @@ function paintClockRow(){
   });
   row.appendChild(i);
   if(hint) hint.textContent='적은 시각을 그대로 씁니다.';
+}
+
+/* Only the card layouts can overflow — the iOS list is one line per row already —
+   so the switch only appears where it does something. */
+function paintMemoClip(){
+  const f=$('#memoClipField'); if(!f) return;
+  const shown=S.memo.style!=='list';
+  f.style.display=shown?'':'none';
+  if(!shown || f.childNodes.length) return;
+  f.appendChild(switchRow('카드 높이 맞추기',
+    '카드를 같은 높이로 맞추고, 넘치는 내용은 …으로 줄입니다',
+    ()=>!!S.memo.clip,
+    function(v){ S.memo.clip=v; renderAll(); save(); }));
 }
 
 function bindGrips(){

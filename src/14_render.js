@@ -330,7 +330,7 @@ function renderMemoHome(notes,opt){
       host=null; lastG=g;
     }
     if(!host){
-      host=el('div', galaxy? ('mv-cards'+(S.memo.style==='grid'?' g2':'')) : 'mv-list');
+      host=el('div', galaxy? ('mv-cards'+(S.memo.style==='grid'?' g2':'')+(S.memo.clip?' is-clip':'')) : 'mv-list');
       body.appendChild(host);
     }
     const picked=!EXPORTING && S.memo.pick && S.memo.sel.indexOf(n.id)>=0;
@@ -347,8 +347,20 @@ function renderMemoHome(notes,opt){
       if(n.sub){ const sb=el('div','mc-sub rt'); sb.innerHTML=richHTML(n.sub);
                  sb.style.color=t.subCol; sb.style.fontSize=(t.subSize||10.5)+'px'; c.appendChild(sb);
                  rest=Object.assign({},n,{body:bodyAfterSub(n)}); }
-      const bd=memoBodyNode(rest,t,S.memo.style==='grid'?4:6);
+      const lines=S.memo.style==='grid'?4:6;
+      /* Off: keep the old block cap — it trims to whole paragraphs, quietly.
+         On: hand over EVERY block and let the line clamp do the cutting, because that
+         is what draws the ellipsis. Capping blocks first would drop the tail with no
+         sign that anything was left out, and a single long paragraph would still run
+         past the others. */
+      const bd=memoBodyNode(rest,t,S.memo.clip?0:lines);
       bd.classList.add('mc-body');
+      if(S.memo.clip){
+        bd.style.display='-webkit-box';
+        bd.style.webkitBoxOrient='vertical';
+        bd.style.webkitLineClamp=String(lines);
+        bd.style.overflow='hidden';
+      }
       bd.style.fontSize=Math.max(8,(t.fontSize-2.5)*0.85)+'px'; bd.style.color=rgba(t.bodyCol,0.88);
       c.appendChild(bd);
       if(picked){ const m=el('div','mv-selmark'); m.style.background=t.accent; m.appendChild(lineIco('check',11,readable(t.accent),3)); c.appendChild(m); }
