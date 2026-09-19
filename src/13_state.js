@@ -19,6 +19,7 @@ const S={
   scale:2,
   fileName:{chat:'',memo:''},
   flip:false, flipIdx:0, statusBar:true, statusTime:'11:34',
+  statusAuto:true, statusSkew:0,
   panelW:428, stageH:0, thFold:false, mixFold:false, thFilter:'기본',
   mixer:null,
   _dirty:0
@@ -32,6 +33,7 @@ function snap(){
     memo:S.memo, range:S.range, theme:S.theme, themeId:S.themeId, custom:S.custom,
     avatars:S.avatars, pages:S.pages, scale:S.scale, fileName:S.fileName,
     statusBar:S.statusBar, statusTime:S.statusTime,
+    statusAuto:S.statusAuto, statusSkew:S.statusSkew,
     panelW:S.panelW, stageH:S.stageH, thFold:S.thFold, mixFold:S.mixFold, thFilter:S.thFilter,
     mixer:S.mixer, at:Date.now()
   };
@@ -87,6 +89,8 @@ function load(){
     S.fileName=Object.assign({chat:'',memo:''},d.fileName);
     S.statusBar=d.statusBar!==false;
     S.statusTime=d.statusTime||'11:34';
+    S.statusAuto=d.statusAuto!==false;
+    S.statusSkew=+d.statusSkew||0;
     S.panelW=d.panelW||428; S.stageH=d.stageH||0; S.thFold=!!d.thFold; S.mixFold=!!d.mixFold;
     S.thFilter=d.thFilter||'기본'; S.mixer=d.mixer||null;
     lastSave=d.at||0;
@@ -132,6 +136,52 @@ function liveList(){
   const b=baseList(), r=curRange();
   const a=clamp(r[0],1,Math.max(1,b.length)), z=clamp(r[1],1,Math.max(1,b.length));
   return b.slice(a-1,z).filter(u=>u.on!==false);
+}
+
+/* ---------- status-bar clock ----------
+   A phone screenshot's clock is not a made-up number: on a memo it is whatever time
+   you took the shot, and on a chat it is a little after the last message — you read
+   it, then you screenshot it. So memo follows the system clock, and chat follows the
+   last message on that page plus a 1-30 minute skew.
+
+   The skew is drawn ONCE and kept. Re-drawing it on every render would make the
+   preview flicker, and the clock in the saved file would not match the one you were
+   looking at when you pressed save. */
+function pad2(n){ return (n<10?'0':'')+n; }
+function rollSkew(){ S.statusSkew=1+Math.floor(Math.random()*30); return S.statusSkew; }
+function skewMin(){ return S.statusSkew>0 ? S.statusSkew : rollSkew(); }
+
+/* tolerant: "09:14", "9:14", "오후 9:14", "9:14 PM" */
+function parseClock(v){
+  const str=String(v||'');
+  const m=str.match(/(\d{1,2})\s*:\s*(\d{2})/);
+  if(!m) return null;
+  let h=+m[1]; const mi=+m[2];
+  if(h>23||mi>59) return null;
+  if(/오후|PM|pm/.test(str) && h<12) h+=12;
+  else if(/오전|AM|am/.test(str) && h===12) h=0;
+  return h*60+mi;
+}
+function clockText(mins){
+  const t=((mins%1440)+1440)%1440;
+  return pad2(Math.floor(t/60))+':'+pad2(t%60);
+}
+function systemClock(){
+  const d=new Date();
+  return pad2(d.getHours())+':'+pad2(d.getMinutes());
+}
+/* a chat page's clock: the last message ON THAT PAGE, pushed forward by the skew */
+function chatClock(units){
+  const list=units||[];
+  for(let i=list.length-1;i>=0;i--){
+    const at=parseClock(list[i] && list[i].time);
+    if(at!=null) return clockText(at+skewMin());
+  }
+  return systemClock();
+}
+function statusClock(units){
+  if(!S.statusAuto) return S.statusTime||'11:34';
+  return (S.mode==='memo') ? systemClock() : chatClock(units);
 }
 
 /* ---------- avatar colour from name ---------- */

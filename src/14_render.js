@@ -40,11 +40,11 @@ function pvShell(t,h){
   return {pv:pv, layer:layer};
 }
 
-function statusBar(t){
+function statusBar(t,clock){
   const dark=!!t.statusDark;
   const col=dark?'#0B0D10':'#FFFFFF';
   const n=el('div','pv-status'); n.style.color=col;
-  n.appendChild(el('span','st-l',S.statusTime||'11:34'));
+  n.appendChild(el('span','st-l',clock||S.statusTime||'11:34'));
   const r=el('div','st-r');
   r.appendChild(svgTag(17,11,'', '<path d="M1 8.2h1.6v2.3H1zM4.6 6h1.6v4.5H4.6zM8.2 3.6h1.6v6.9H8.2zM11.8 1h1.6v9.5h-1.6z" fill="'+col+'"/>'));
   r.appendChild(svgTag(16,12,'', '<path d="M8 10.6 4.2 6.9a5.4 5.4 0 0 1 7.6 0L8 10.6Z" fill="'+col+'"/><path d="M1.6 4.4a9.1 9.1 0 0 1 12.8 0" stroke="'+col+'" stroke-width="1.5" fill="none" stroke-linecap="round"/>'));
@@ -119,7 +119,7 @@ function renderChatPage(units,opt){
   const t=S.theme.chat;
   const sh=pvShell(t,opt.minH);
   const L=sh.layer;
-  if(S.statusBar) L.appendChild(statusBar(t));
+  if(S.statusBar) L.appendChild(statusBar(t,statusClock(units)));
   if(opt.bar!==false){
     const ri = opt.room==null ? S.chat.room : opt.room;
     const mem = roomMembers(ri);
@@ -301,7 +301,7 @@ function renderMemoHome(notes,opt){
   const t=S.theme.memo;
   const sh=pvShell(t,opt.minH);
   const L=sh.layer;
-  if(S.statusBar) L.appendChild(statusBar(t));
+  if(S.statusBar) L.appendChild(statusBar(t,statusClock()));
   const title=S.memo.appTitle||'메모';
   const galaxy = S.memo.style!=='list';
   L.appendChild(topBar(t,{
@@ -392,7 +392,7 @@ function renderMemoDetail(note,blocksSlice,opt){
   const t=S.theme.memo;
   const sh=pvShell(t,opt.minH);
   const L=sh.layer;
-  if(S.statusBar) L.appendChild(statusBar(t));
+  if(S.statusBar) L.appendChild(statusBar(t,statusClock()));
   L.appendChild(topBar(t,{ title:S.memo.appTitle||'메모', icons:['search','dots'], backAct:'home' }));
   if(paperCss(t)){ const pp=el('div','mv-paper'); pp.style.background=paperCss(t); pp.style.backgroundSize=t.paper==='dot'?'16px 16px':'auto'; sh.pv.appendChild(pp); }
 

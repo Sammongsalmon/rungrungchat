@@ -38,6 +38,7 @@ function applyMode(){
   _thKey='';
   reparseIfNeeded();
   paintThemeGrid(); paintMixer(); paintThemeEditor(true);
+  paintClockRow();                 /* the clock row differs between chat and memo */
   syncInputs();
   afterDataChange(true);
 }
@@ -144,6 +145,10 @@ function wire(){
     paintMemoSelInfo(); paintPagesSlider(); renderAll();
   });
   bindChoice('scale',()=>String(S.scale),function(v){ S.scale=+v; paintPagesSlider(); save(); });
+  bindChoice('statusAuto',()=>S.statusAuto?'auto':'fix',function(v){
+    S.statusAuto=(v==='auto'); paintClockRow(); renderAll(); save();
+  });
+  paintClockRow();
 
   /* range */
   bindNum($('#rangeA'),()=>curRange()[0],function(v){ const r=curRange(); r[0]=Math.min(v,r[1]); paintRangeUI(); clampPages(); renderAll(); },
@@ -305,6 +310,35 @@ function applyPanes(){
   if(stacked() && S.stageH) a.style.maxHeight=S.stageH+'px';
   else a.style.removeProperty('max-height');
 }
+/* The clock row only carries what the current mode can act on: a memo's clock is the
+   system's and has nothing to tune, a chat's is a roll of the dice you may want to
+   re-roll, and either can be pinned by hand. */
+function paintClockRow(){
+  const row=$('#clockRow'), hint=$('#clockHint');
+  if(!row) return;
+  row.innerHTML='';
+  if(S.statusAuto){
+    if(S.mode==='chat'){
+      const b=el('button','btn sm');
+      b.innerHTML=ico('dice',15)+'시간 다시 뽑기 (+'+skewMin()+'분)';
+      on(b,'click',function(){ rollSkew(); paintClockRow(); renderAll(); save(); });
+      const wrap=el('div','btn-row'); wrap.style.margin='8px 0 0';
+      wrap.appendChild(b); row.appendChild(wrap);
+      if(hint) hint.textContent='마지막 말풍선 시각에서 '+skewMin()+'분 뒤로 맞춥니다. 장이 여러 개면 장마다 그 장의 마지막 시각을 씁니다.';
+    }else if(hint){
+      hint.textContent='내보내는 순간의 시스템 시각을 씁니다. 지금은 '+systemClock()+'.';
+    }
+    return;
+  }
+  const i=document.createElement('input');
+  i.className='inp'; i.placeholder='예: 11:34'; i.style.marginTop='8px';
+  bindText(i,()=>S.statusTime,function(v){
+    S.statusTime=v||'11:34'; renderAll(); save();
+  });
+  row.appendChild(i);
+  if(hint) hint.textContent='적은 시각을 그대로 씁니다.';
+}
+
 function bindGrips(){
   grip($('#rszX'),'x'); grip($('#rszY'),'y');
 }

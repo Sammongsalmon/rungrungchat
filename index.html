@@ -1317,6 +1317,15 @@ html[data-ui="dark"] .toast{color:#15171B}
               <p class="hint" id="fileHint"></p>
             </div>
             <div class="field">
+              <span class="lab">상단바 시계</span>
+              <div class="choice" data-choice="statusAuto">
+                <button class="choice-b is-on" data-v="auto">자동</button>
+                <button class="choice-b" data-v="fix">직접 입력</button>
+              </div>
+              <div id="clockRow"></div>
+              <p class="hint" id="clockHint"></p>
+            </div>
+            <div class="field">
               <span class="lab">해상도</span>
               <div class="choice" data-choice="scale">
                 <button class="choice-b is-on" data-v="2">2× 표준</button>
@@ -2421,6 +2430,7 @@ const S={
   scale:2,
   fileName:{chat:'',memo:''},
   flip:false, flipIdx:0, statusBar:true, statusTime:'11:34',
+  statusAuto:true, statusSkew:0,
   panelW:428, stageH:0, thFold:false, mixFold:false, thFilter:'기본',
   mixer:null,
   _dirty:0
@@ -2434,6 +2444,7 @@ function snap(){
     memo:S.memo, range:S.range, theme:S.theme, themeId:S.themeId, custom:S.custom,
     avatars:S.avatars, pages:S.pages, scale:S.scale, fileName:S.fileName,
     statusBar:S.statusBar, statusTime:S.statusTime,
+    statusAuto:S.statusAuto, statusSkew:S.statusSkew,
     panelW:S.panelW, stageH:S.stageH, thFold:S.thFold, mixFold:S.mixFold, thFilter:S.thFilter,
     mixer:S.mixer, at:Date.now()
   };
@@ -2489,6 +2500,8 @@ function load(){
     S.fileName=Object.assign({chat:'',memo:''},d.fileName);
     S.statusBar=d.statusBar!==false;
     S.statusTime=d.statusTime||'11:34';
+    S.statusAuto=d.statusAuto!==false;
+    S.statusSkew=+d.statusSkew||0;
     S.panelW=d.panelW||428; S.stageH=d.stageH||0; S.thFold=!!d.thFold; S.mixFold=!!d.mixFold;
     S.thFilter=d.thFilter||'기본'; S.mixer=d.mixer||null;
     lastSave=d.at||0;
@@ -2534,6 +2547,52 @@ function liveList(){
   const b=baseList(), r=curRange();
   const a=clamp(r[0],1,Math.max(1,b.length)), z=clamp(r[1],1,Math.max(1,b.length));
   return b.slice(a-1,z).filter(u=>u.on!==false);
+}
+
+/* ---------- status-bar clock ----------
+   A phone screenshot's clock is not a made-up number: on a memo it is whatever time
+   you took the shot, and on a chat it is a little after the last message — you read
+   it, then you screenshot it. So memo follows the system clock, and chat follows the
+   last message on that page plus a 1-30 minute skew.
+
+   The skew is drawn ONCE and kept. Re-drawing it on every render would make the
+   preview flicker, and the clock in the saved file would not match the one you were
+   looking at when you pressed save. */
+function pad2(n){ return (n<10?'0':'')+n; }
+function rollSkew(){ S.statusSkew=1+Math.floor(Math.random()*30); return S.statusSkew; }
+function skewMin(){ return S.statusSkew>0 ? S.statusSkew : rollSkew(); }
+
+/* tolerant: "09:14", "9:14", "오후 9:14", "9:14 PM" */
+function parseClock(v){
+  const str=String(v||'');
+  const m=str.match(/(\d{1,2})\s*:\s*(\d{2})/);
+  if(!m) return null;
+  let h=+m[1]; const mi=+m[2];
+  if(h>23||mi>59) return null;
+  if(/오후|PM|pm/.test(str) && h<12) h+=12;
+  else if(/오전|AM|am/.test(str) && h===12) h=0;
+  return h*60+mi;
+}
+function clockText(mins){
+  const t=((mins%1440)+1440)%1440;
+  return pad2(Math.floor(t/60))+':'+pad2(t%60);
+}
+function systemClock(){
+  const d=new Date();
+  return pad2(d.getHours())+':'+pad2(d.getMinutes());
+}
+/* a chat page's clock: the last message ON THAT PAGE, pushed forward by the skew */
+function chatClock(units){
+  const list=units||[];
+  for(let i=list.length-1;i>=0;i--){
+    const at=parseClock(list[i] && list[i].time);
+    if(at!=null) return clockText(at+skewMin());
+  }
+  return systemClock();
+}
+function statusClock(units){
+  if(!S.statusAuto) return S.statusTime||'11:34';
+  return (S.mode==='memo') ? systemClock() : chatClock(units);
 }
 
 /* ---------- avatar colour from name ---------- */
@@ -2644,11 +2703,11 @@ function pvShell(t,h){
   return {pv:pv, layer:layer};
 }
 
-function statusBar(t){
+function statusBar(t,clock){
   const dark=!!t.statusDark;
   const col=dark?'#0B0D10':'#FFFFFF';
   const n=el('div','pv-status'); n.style.color=col;
-  n.appendChild(el('span','st-l',S.statusTime||'11:34'));
+  n.appendChild(el('span','st-l',clock||S.statusTime||'11:34'));
   const r=el('div','st-r');
   r.appendChild(svgTag(17,11,'', '<path d="M1 8.2h1.6v2.3H1zM4.6 6h1.6v4.5H4.6zM8.2 3.6h1.6v6.9H8.2zM11.8 1h1.6v9.5h-1.6z" fill="'+col+'"/>'));
   r.appendChild(svgTag(16,12,'', '<path d="M8 10.6 4.2 6.9a5.4 5.4 0 0 1 7.6 0L8 10.6Z" fill="'+col+'"/><path d="M1.6 4.4a9.1 9.1 0 0 1 12.8 0" stroke="'+col+'" stroke-width="1.5" fill="none" stroke-linecap="round"/>'));
@@ -2723,7 +2782,7 @@ function renderChatPage(units,opt){
   const t=S.theme.chat;
   const sh=pvShell(t,opt.minH);
   const L=sh.layer;
-  if(S.statusBar) L.appendChild(statusBar(t));
+  if(S.statusBar) L.appendChild(statusBar(t,statusClock(units)));
   if(opt.bar!==false){
     const ri = opt.room==null ? S.chat.room : opt.room;
     const mem = roomMembers(ri);
@@ -2905,7 +2964,7 @@ function renderMemoHome(notes,opt){
   const t=S.theme.memo;
   const sh=pvShell(t,opt.minH);
   const L=sh.layer;
-  if(S.statusBar) L.appendChild(statusBar(t));
+  if(S.statusBar) L.appendChild(statusBar(t,statusClock()));
   const title=S.memo.appTitle||'메모';
   const galaxy = S.memo.style!=='list';
   L.appendChild(topBar(t,{
@@ -2996,7 +3055,7 @@ function renderMemoDetail(note,blocksSlice,opt){
   const t=S.theme.memo;
   const sh=pvShell(t,opt.minH);
   const L=sh.layer;
-  if(S.statusBar) L.appendChild(statusBar(t));
+  if(S.statusBar) L.appendChild(statusBar(t,statusClock()));
   L.appendChild(topBar(t,{ title:S.memo.appTitle||'메모', icons:['search','dots'], backAct:'home' }));
   if(paperCss(t)){ const pp=el('div','mv-paper'); pp.style.background=paperCss(t); pp.style.backgroundSize=t.paper==='dot'?'16px 16px':'auto'; sh.pv.appendChild(pp); }
 
@@ -5260,6 +5319,7 @@ function applyMode(){
   _thKey='';
   reparseIfNeeded();
   paintThemeGrid(); paintMixer(); paintThemeEditor(true);
+  paintClockRow();                 /* the clock row differs between chat and memo */
   syncInputs();
   afterDataChange(true);
 }
@@ -5366,6 +5426,10 @@ function wire(){
     paintMemoSelInfo(); paintPagesSlider(); renderAll();
   });
   bindChoice('scale',()=>String(S.scale),function(v){ S.scale=+v; paintPagesSlider(); save(); });
+  bindChoice('statusAuto',()=>S.statusAuto?'auto':'fix',function(v){
+    S.statusAuto=(v==='auto'); paintClockRow(); renderAll(); save();
+  });
+  paintClockRow();
 
   /* range */
   bindNum($('#rangeA'),()=>curRange()[0],function(v){ const r=curRange(); r[0]=Math.min(v,r[1]); paintRangeUI(); clampPages(); renderAll(); },
@@ -5527,6 +5591,35 @@ function applyPanes(){
   if(stacked() && S.stageH) a.style.maxHeight=S.stageH+'px';
   else a.style.removeProperty('max-height');
 }
+/* The clock row only carries what the current mode can act on: a memo's clock is the
+   system's and has nothing to tune, a chat's is a roll of the dice you may want to
+   re-roll, and either can be pinned by hand. */
+function paintClockRow(){
+  const row=$('#clockRow'), hint=$('#clockHint');
+  if(!row) return;
+  row.innerHTML='';
+  if(S.statusAuto){
+    if(S.mode==='chat'){
+      const b=el('button','btn sm');
+      b.innerHTML=ico('dice',15)+'시간 다시 뽑기 (+'+skewMin()+'분)';
+      on(b,'click',function(){ rollSkew(); paintClockRow(); renderAll(); save(); });
+      const wrap=el('div','btn-row'); wrap.style.margin='8px 0 0';
+      wrap.appendChild(b); row.appendChild(wrap);
+      if(hint) hint.textContent='마지막 말풍선 시각에서 '+skewMin()+'분 뒤로 맞춥니다. 장이 여러 개면 장마다 그 장의 마지막 시각을 씁니다.';
+    }else if(hint){
+      hint.textContent='내보내는 순간의 시스템 시각을 씁니다. 지금은 '+systemClock()+'.';
+    }
+    return;
+  }
+  const i=document.createElement('input');
+  i.className='inp'; i.placeholder='예: 11:34'; i.style.marginTop='8px';
+  bindText(i,()=>S.statusTime,function(v){
+    S.statusTime=v||'11:34'; renderAll(); save();
+  });
+  row.appendChild(i);
+  if(hint) hint.textContent='적은 시각을 그대로 씁니다.';
+}
+
 function bindGrips(){
   grip($('#rszX'),'x'); grip($('#rszY'),'y');
 }
