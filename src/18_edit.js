@@ -75,6 +75,27 @@ function paintPagesSlider(){
   paintDetailSize();
 }
 
+/* Auto reads the labels first, then position. When a log writes its header in an
+   order we guess wrong, the user pins it here and everything is parsed again. */
+const HEAD_ORDER_HINT={
+  auto:'머리글의 라벨(보낸사람·발신시간·받는사람)을 먼저 보고, 없으면 <b>&lt; 첫째 / 둘째 / 셋째 &gt;</b> 자리로 읽습니다. 라벨과 띄어쓰기는 없어도 됩니다.',
+  wtr:'라벨을 무시하고 <b>&lt; 보낸사람 / 시간 / 받는사람 &gt;</b> 자리로 읽습니다.',
+  wrt:'라벨을 무시하고 <b>&lt; 보낸사람 / 받는사람 / 시간 &gt;</b> 자리로 읽습니다.',
+  trw:'라벨을 무시하고 <b>&lt; 시간 / 받는사람 / 보낸사람 &gt;</b> 자리로 읽습니다.'
+};
+const MEMO_ORDER_HINT={
+  auto:'머리글의 라벨(날짜·제목)을 먼저 보고, 없으면 날짜처럼 보이는 쪽을 날짜로 읽습니다.',
+  dt:'라벨을 무시하고 <b>&lt; 날짜·시간 / 제목 &gt;</b> 자리로 읽습니다.',
+  td:'라벨을 무시하고 <b>&lt; 제목 / 날짜·시간 &gt;</b> 자리로 읽습니다.'
+};
+function paintHeadOrder(){
+  const a=$('[data-choice="headOrder"]'), b=$('[data-choice="memoHeadOrder"]');
+  if(a){ if(a._sync) a._sync();
+         const h=$('#headOrderHint'); if(h) h.innerHTML=HEAD_ORDER_HINT[S.headOrder]||''; }
+  if(b){ if(b._sync) b._sync();
+         const h=$('#memoHeadOrderHint'); if(h) h.innerHTML=MEMO_ORDER_HINT[S.memoHeadOrder]||''; }
+}
+
 /* The memo-length choice only means anything when memo screens are actually being
    produced, so it goes quiet for '메모 홈만'. */
 function paintDetailSize(){
@@ -215,10 +236,16 @@ function editorNode(u,i,list){
 
   if(S.mode==='chat'){
     const row=el('div','inp-row'); row.style.marginBottom='12px';
-    const w=add('보낸 사람',u.who,v=>{u.who=v;}); w.f.style.flex='1';
+    const w=add('보낸 사람',u.who,v=>{u.who=v; retagRooms();}); w.f.style.flex='1';
     const t=add('시간',u.time,v=>{u.time=v;}); t.f.style.width='110px'; t.f.style.flex='0 0 auto';
     w.f.style.marginBottom='0'; t.f.style.marginBottom='0';
     row.appendChild(w.f); row.appendChild(t.f); n.appendChild(row);
+    /* When the header cannot be read at all, the names have to be assignable by hand
+       — and the recipient decides which room the message lands in. */
+    const r2=el('div','inp-row'); r2.style.marginBottom='12px';
+    const rc=add('받는 사람',u.to,function(v){ u.to=v; u.tos=splitNames(v); retagRooms(); });
+    rc.f.style.flex='1'; rc.f.style.marginBottom='0';
+    r2.appendChild(rc.f); n.appendChild(r2);
     const b=add('내용',u.text,v=>{u.text=v;},true);
     n.appendChild(fmtBar(b.inp));
     n.appendChild(b.f);

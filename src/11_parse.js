@@ -51,13 +51,179 @@ function bracketSegs(block){
   return out.map(t=>t.replace(/^\n+|\n+$/g,'')).filter(t=>t.trim()!=='');
 }
 
-const CHAT_HEAD=/^\s*<\s*보낸\s*사람\s*[:：]?\s*([\s\S]*?)\s*\/\s*발신\s*시간\s*[:：]?\s*([\s\S]*?)\s*\/\s*받는\s*사람\s*[:：]?\s*([\s\S]*?)\s*>\s*$/;
-const CHAT_HEAD_LOOSE=/^\s*<\s*([^<>\/]+?)\s*\/\s*([0-9]{1,2}\s*[:：]\s*[0-9]{2}(?:\s*[APap][Mm])?|오전[^\/]*|오후[^\/]*)\s*\/\s*([^<>]+?)\s*>\s*$/;
-
 /* "쿠베라, 아미타바" / "쿠베라 및 아미타바" -> ['쿠베라','아미타바'] */
 function splitNames(v){
   return String(v||'').split(/\s*[,،、;]\s*|\s+및\s+|\s+와\s+|\s+과\s+|\s+and\s+/i)
     .map(x=>x.trim()).filter(Boolean);
+}
+
+/* ============================================================
+   HEADERS  —  < 보낸사람 / 발신시간 / 받는사람 >  and  < 날짜·시간 / 제목 >
+
+   The labels are a courtesy, not a grammar. Pasted logs drop them, run them
+   together without spaces, or use a synonym, and what actually fixes a field's
+   meaning is where it sits between the slashes. So: split on the slashes, put
+   the date's own slash back, then read the fields by position — and let a label,
+   wherever one survives, override that guess.
+   ============================================================ */
+/* A label may end with a colon, or just run into its value on a space — but only the
+   unmistakable여러 -word ones may do the latter. "시간", "to" and friends are too easy to
+   hit by accident, so those are recognised only with their colon. */
+const LB_FROM =/^\s*(?:(?:보낸\s*(?:사람|이|분)|발신\s*(?:자|인)|송신\s*(?:자|인)|작성자|sender)\s*(?:[:：]|\s|$)|(?:발신|송신|from)\s*(?:[:：]|$))/i;
+const LB_TIME =/^\s*(?:(?:발신\s*(?:시간|시각|일시)|보낸\s*(?:시간|시각|날짜)|받은\s*(?:시간|시각)|전송\s*(?:시간|시각)|수신\s*(?:시간|시각)|작성\s*(?:시간|시각|일시))\s*(?:[:：]|\s|$)|(?:시간|시각|일시|날짜|time|date)\s*(?:[:：]|$))/i;
+const LB_TO   =/^\s*(?:(?:받는\s*(?:사람|이|분|곳)|받은\s*(?:사람|이)|수신\s*(?:자|인)|recipient)\s*(?:[:：]|\s|$)|(?:수신|to)\s*(?:[:：]|$))/i;
+const LB_TITLE=/^\s*(?:(?:메모\s*제목|제목|타이틀|표제|subject)\s*(?:[:：]|\s|$)|(?:title)\s*(?:[:：]|$))/i;
+const LB_ANY  =[LB_FROM,LB_TIME,LB_TO,LB_TITLE];
+function chatLabelled(f){
+  for(let i=0;i<f.length;i++)
+    if(LB_FROM.test(f[i])||LB_TIME.test(f[i])||LB_TO.test(f[i])) return true;
+  return false;
+}
+
+function stripLab(s,re){
+  const v=String(s==null?'':s);
+  return (re && re.test(v) ? v.replace(re,'') : v).replace(/^\s*[:：]\s*/,'').trim();
+}
+function hasLab(s){ for(let i=0;i<LB_ANY.length;i++) if(LB_ANY[i].test(s)) return true; return false; }
+
+function isTimeish(s){ return /\d{1,2}\s*[:：]\s*\d{2}/.test(s) || /(오전|오후|AM|PM)\s*\d/i.test(s); }
+function isDateish(s){
+  return /\d{1,2}\s*[\/.\-]\s*\d{1,2}/.test(s) || /\d{1,2}\s*월\s*\d{1,2}/.test(s) ||
+         /\d{4}\s*[.\-\/]\s*\d{1,2}/.test(s) || /\d{1,2}\s*월/.test(s);
+}
+function isWhenish(s){ return isTimeish(s)||isDateish(s); }
+
+/* the text inside a lone "< … >" line, or null */
+function headInner(L){
+  const m=/^\s*<\s*([^<>]*?)\s*>\s*$/.exec(String(L==null?'':L));
+  return m ? m[1] : null;
+}
+
+/* Split a header on its slashes. A date writes its own slash ("06/02", "2026/06/02"),
+   so a slash sitting between two bare numbers is put back rather than counted. */
+function headFields(inner){
+  const raw=String(inner==null?'':inner).split('/');
+  const out=[raw[0]];
+  for(let i=1;i<raw.length;i++){
+    const prev=out[out.length-1];
+    /* bare number on the left, number on the right -> the slash is part of a date.
+       A clock on the right is never that: "12/04 / 23:58" is a date and a time in two
+       fields, not a three-part date. */
+    if(/(?:^|[\s:：,([\/])\d{1,4}\s*$/.test(prev) && /^\s*\d{1,2}(?!\d)/.test(raw[i])
+       && !/^\s*\d{1,2}\s*[:：]\s*\d{2}/.test(raw[i]))
+      out[out.length-1]=prev+'/'+raw[i];
+    else out.push(raw[i]);
+  }
+  return out.map(x=>x.trim());
+}
+
+/* Where do the three chat fields sit? Labels win; otherwise position does, and the
+   user can pin the order by hand when a log uses one we would guess wrong. */
+function chatSlots(f){
+  const n=f.length, idx={who:-1,time:-1,to:-1};
+  for(let i=0;i<n;i++){
+    if(idx.who<0  && LB_FROM.test(f[i])) idx.who=i;
+    if(idx.time<0 && LB_TIME.test(f[i])) idx.time=i;
+    if(idx.to<0   && LB_TO.test(f[i]))   idx.to=i;
+  }
+  const pinned=(typeof S!=='undefined' && S.headOrder) ? S.headOrder : 'auto';
+  if(pinned!=='auto' && n>=2){
+    const map={who:'w',time:'t',to:'r'};
+    Object.keys(map).forEach(function(k){
+      const p=pinned.indexOf(map[k]);
+      idx[k] = (p>=0 && p<n) ? p : -1;
+    });
+    return idx;
+  }
+  /* fill the gaps left to right, in the order the fields normally appear */
+  const taken=[idx.who,idx.time,idx.to].filter(i=>i>=0);
+  const free=[]; for(let i=0;i<n;i++) if(taken.indexOf(i)<0) free.push(i);
+  if(idx.who<0 && idx.time<0 && idx.to<0){
+    /* nothing is labelled: 3 fields read 보낸사람 / 시간 / 받는사람, 2 fields depend
+       on whether the second one looks like a clock */
+    if(n>=3){ idx.who=0; idx.time=1; idx.to=2; }
+    else if(n===2){ idx.who=0; if(isWhenish(f[1])) idx.time=1; else idx.to=1; }
+    return idx;
+  }
+  ['who','time','to'].forEach(function(k){
+    if(idx[k]>=0) return;
+    for(let i=0;i<free.length;i++){
+      const c=free[i];
+      if(k==='time' && !isWhenish(f[c]) && free.length>1) continue;
+      if(k!=='time' && isWhenish(f[c]) && !hasLab(f[c]) && free.length>1) continue;
+      idx[k]=c; free.splice(i,1); return;
+    }
+  });
+  return idx;
+}
+
+/* a "< … >" line read as a chat header, or null */
+function chatHead(L){
+  const inner=headInner(L);
+  if(inner==null || inner==='') return null;
+  let f=headFields(inner);
+  if(f.length<2) return null;
+  /* With no labels at all, position is the whole grammar: the first field is the
+     sender, the last is the recipient, and whatever sits between them is the time. */
+  if(f.length>3 && !f.some(hasLab)) f=[f[0], f.slice(1,-1).join(' '), f[f.length-1]];
+  const pinned=(typeof S!=='undefined' && S.headOrder) ? S.headOrder : 'auto';
+  /* "< 12/04 23:58 / 제목 >" is a memo header, not a message. Nothing here names a
+     sender or a recipient, and the first slot holds a date — read as a message it put
+     the date in the name slot and the memo's title in the recipient's. A '제목' label
+     says the same thing outright. Pinning the order by hand overrules all of it. */
+  if(pinned==='auto'){
+    const named=f.some(function(x){ return LB_FROM.test(x)||LB_TO.test(x); });
+    if(!named && (f.some(function(x){ return LB_TITLE.test(x); }) || isWhenish(f[0]))) return null;
+  }
+  const idx=chatSlots(f);
+  const who =idx.who >=0 ? stripLab(f[idx.who ],LB_FROM) : '';
+  const time=idx.time>=0 ? stripLab(f[idx.time],LB_TIME) : '';
+  let   to  =idx.to  >=0 ? stripLab(f[idx.to  ],LB_TO  ) : '';
+  if(!who) return null;
+  let mis='';
+  const mm=/^([\s\S]*?)\s*[（(]\s*(?:본래|원래|실제|진짜)?\s*(?:보내려\s*한?|보낼)?\s*사람\s*[:：]?\s*([\s\S]*?)\s*[）)]\s*$/.exec(to);
+  if(mm){ to=mm[1].trim(); mis=mm[2].trim(); }
+  return { who:who, time:time, to:to, tos:splitNames(to), mis:mis };
+}
+
+/* Where do the memo fields sit? Same basis: labels first, then position. */
+function memoHead(L){
+  const inner=headInner(L);
+  if(inner==null || inner==='' || inner.length>90) return null;
+  const f=headFields(inner);
+  const pinned=(typeof S!=='undefined' && S.memoHeadOrder) ? S.memoHeadOrder : 'auto';
+  /* Skip the chat headers that sit in a pasted memo log. Only the unmistakable ones:
+     a 보낸사람/받는사람 label, or a full three-field message header. Anything shorter
+     is read as a memo header, so "< 장보기 / 12/04 23:58 >" still lands. */
+  if(f.some(function(x){ return LB_FROM.test(x)||LB_TO.test(x); })) return null;
+  if(pinned==='auto' && f.length>=3 && chatHead(L)) return null;
+  let wi=-1, ti=-1;
+  for(let i=0;i<f.length;i++){
+    if(wi<0 && LB_TIME.test(f[i]))  wi=i;
+    if(ti<0 && LB_TITLE.test(f[i])) ti=i;
+  }
+  if(pinned!=='auto' && f.length>=2){
+    wi=pinned==='dt'?0:1; ti=pinned==='dt'?1:0;
+  }else{
+    if(wi<0){                      /* the date slot is whichever field reads like one */
+      for(let i=0;i<f.length;i++) if(i!==ti && isWhenish(f[i])){ wi=i; break; }
+    }
+    if(ti<0){
+      for(let i=f.length-1;i>=0;i--) if(i!==wi && f[i]){ ti=i; break; }
+    }
+  }
+  let when = wi>=0 ? stripLab(f[wi],LB_TIME) : '';
+  let tag  = ti>=0 ? stripLab(f[ti],LB_TITLE) : '';
+  /* "< 12/04 / 23:58 / 제목 >" — a split date and clock belong together */
+  if(wi>=0 && ti!==wi+1 && f.length>2 && isDateish(f[wi]) && f[wi+1] && isTimeish(f[wi+1]) && wi+1!==ti)
+    when=when+' '+stripLab(f[wi+1],LB_TIME);
+  if(wi===ti) tag='';
+  const labelled=f.some(hasLab);
+  /* Without a date or a label there is nothing telling a header apart from a stray
+     line of prose in angle brackets, so those stay body text. */
+  if(!when && !labelled) return null;
+  if(/^(제목\s*없음|없음|무제|없다|-|—)$/.test(tag)) tag='';
+  return { when:when, tag:tag };
 }
 
 function parseChat(src){
@@ -77,16 +243,8 @@ function parseChat(src){
 
   for(let i=0;i<lines.length;i++){
     const L=lines[i];
-    let m=CHAT_HEAD.exec(L);
-    if(!m && /^\s*<[^>]+\/[^>]+\/[^>]+>\s*$/.test(L)) m=CHAT_HEAD_LOOSE.exec(L);
-    if(m){
-      flush();
-      let to=m[3].trim(), mis='';
-      const mm=/^([\s\S]*?)\s*[（(]\s*(?:본래|원래|실제)?\s*보내려\s*한?\s*사람\s*[:：]?\s*([\s\S]*?)\s*[）)]\s*$/.exec(to);
-      if(mm){ to=mm[1].trim(); mis=mm[2].trim(); }
-      cur={ who:m[1].trim(), time:m[2].trim(), to:to, tos:splitNames(to), mis:mis };
-      continue;
-    }
+    const h=chatHead(L);
+    if(h){ flush(); cur=h; continue; }
     if(cur) buf.push(L);
   }
   flush();
@@ -123,18 +281,6 @@ function parseChat(src){
 /* ============================================================
    MEMO
    ============================================================ */
-const MEMO_HEAD=/^\s*<\s*([^<>]*?)\s*>\s*$/;
-/* "06/02 03:41 / ※ 확인"  ->  ["06/02 03:41", "※ 확인"]   (the date's own "/" must not split) */
-function splitMemoHead(inner){
-  let m=/^([\s\S]*?)\s+\/\s+([\s\S]*)$/.exec(inner);
-  if(m) return [m[1].trim(), m[2].trim()];
-  const i=inner.lastIndexOf('/');
-  if(i>0){
-    const a=inner.slice(0,i).trim(), b=inner.slice(i+1).trim();
-    if(b && (/\d{1,2}\s*[:：]\s*\d{2}/.test(a) || /\d{1,2}\s*[.\-]\s*\d{1,2}/.test(a) || /\d{1,2}\s*월/.test(a))) return [a,b];
-  }
-  return [inner.trim(),''];
-}
 
 function parseMemo(src){
   const text=stripNoise(src);
@@ -180,14 +326,14 @@ function parseMemo(src){
 
   for(let i=0;i<lines.length;i++){
     const L=lines[i];
-    if(CHAT_HEAD.test(L)){ continue; }
-    const m=MEMO_HEAD.exec(L);
-    if(m && /\d/.test(m[1]) && m[1].length<70 && !/보낸\s*사람|받는\s*사람/.test(m[1])){
+    /* A memo header gets first refusal — it is the one we are looking for here, and
+       "< 장보기 / 12/04 23:58 >" would otherwise read as a message and be thrown away.
+       memoHead already stands aside for the unmistakable chat headers. */
+    const h=memoHead(L);
+    if(!h && chatHead(L)){ continue; }
+    if(h){
       flush();
-      const parts=splitMemoHead(m[1]);
-      let tag=parts[1];
-      if(/^(제목\s*없음|없음|무제|-|없다)$/.test(tag)) tag='';
-      cur={ id:'m'+notes.length+'_'+uid(), when:parts[0], tag:tag, on:true };
+      cur={ id:'m'+notes.length+'_'+uid(), when:h.when, tag:h.tag, on:true };
       continue;
     }
     if(cur) buf.push(L);
