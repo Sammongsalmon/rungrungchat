@@ -1329,6 +1329,11 @@ html[data-ui="dark"] .toast{color:#15171B}
               <p class="hint" id="clockHint"></p>
             </div>
             <div class="field">
+              <span class="lab">화면 모서리 <span class="val" id="frameRVal">0px</span></span>
+              <div class="sld" id="frameRSld" tabindex="0" role="slider" aria-label="화면 모서리"></div>
+              <p class="hint">저장되는 이미지의 네 모서리입니다. 미리보기는 폰 모양 그대로 둡니다. 모서리 바깥은 투명하게 저장됩니다.</p>
+            </div>
+            <div class="field">
               <span class="lab">해상도</span>
               <div class="choice" data-choice="scale">
                 <button class="choice-b is-on" data-v="2">2× 표준</button>
@@ -2430,7 +2435,7 @@ const S={
   custom:[],
   avatars:{},
   pages:{chat:1, memo:1},
-  scale:2,
+  scale:2, frameR:0,
   fileName:{chat:'',memo:''},
   flip:false, flipIdx:0, statusBar:true, statusTime:'11:34',
   statusAuto:true, statusSkew:0,
@@ -2445,7 +2450,7 @@ function snap(){
     chat:{units:S.chat.units, rooms:S.chat.rooms, room:S.chat.room, me:S.chat.me,
           roomName:S.chat.roomName, dateLine:S.chat.dateLine},
     memo:S.memo, range:S.range, theme:S.theme, themeId:S.themeId, custom:S.custom,
-    avatars:S.avatars, pages:S.pages, scale:S.scale, fileName:S.fileName,
+    avatars:S.avatars, pages:S.pages, scale:S.scale, frameR:S.frameR, fileName:S.fileName,
     statusBar:S.statusBar, statusTime:S.statusTime,
     statusAuto:S.statusAuto, statusSkew:S.statusSkew,
     panelW:S.panelW, stageH:S.stageH, thFold:S.thFold, mixFold:S.mixFold, thFilter:S.thFilter,
@@ -2500,6 +2505,7 @@ function load(){
     S.avatars=d.avatars||{};
     S.pages=Object.assign({chat:1,memo:1},d.pages);
     S.scale=(+d.scale===3)?3:2;      /* 1x was dropped — anything else means 2x */
+    S.frameR=clamp(+d.frameR||0,0,36);
     S.fileName=Object.assign({chat:'',memo:''},d.fileName);
     S.statusBar=d.statusBar!==false;
     S.statusTime=d.statusTime||'11:34';
@@ -3932,9 +3938,14 @@ async function exportPNG(){
     for(let i=0;i<live.length;i++){
       busy(true,'이미지를 만드는 중… ('+(i+1)+'/'+live.length+')');
       const tag=$('.page-tag',live[i]); if(tag) tag.style.display='none';
+      /* The preview keeps the soft phone corners because that is what it is showing —
+         a phone. The FILE is a different thing: square by default so it drops into
+         anything without a rounded notch, and rounded only if asked. */
+      const keepR=live[i].style.borderRadius;
+      live[i].style.borderRadius=clamp(+S.frameR||0,0,36)+'px';
       let c;
       try{ c=await nodeToCanvas(live[i],scale); }
-      finally{ if(tag) tag.style.display=''; }
+      finally{ if(tag) tag.style.display=''; live[i].style.borderRadius=keepR; }
       const blob=await canvasToBlob(c);
       const label=live[i].dataset.label||'';
       const nm = live.length>1
@@ -4352,7 +4363,7 @@ function paintMemoSelInfo(){
 /* ============================================================
    RANGE + EDIT LIST
    ============================================================ */
-let rangeSld=null, pagesSld=null;
+let rangeSld=null, pagesSld=null, frameSld=null;
 
 function paintRangeUI(){
   const b=baseList().length||1;
@@ -4422,6 +4433,22 @@ function paintPagesSlider(){
   else h.textContent='고른 메모 1개를 '+v+'장으로 나눕니다.';
   const sh=$('#sizeHint');
   if(sh) sh.textContent='가로 '+(PV_W*S.scale)+'px 기준으로 저장됩니다.';
+  paintFrameSld();
+}
+
+/* the exported image's own corners — built once, then only kept in sync */
+function paintFrameSld(){
+  const node=$('#frameRSld'), val=$('#frameRVal');
+  if(!node||!val) return;
+  const v=clamp(+S.frameR||0,0,36);
+  S.frameR=v;
+  const fmt=x=>Math.round(x)+'px';
+  if(!frameSld){
+    frameSld=makeSlider(node,{min:0,max:36,step:1,value:v,fmt:fmt,
+      onInput:function(x){ val.textContent=fmt(x); },
+      onChange:function(x){ S.frameR=x; val.textContent=fmt(x); save(); }});
+  }else if(!frameSld.dragging()) frameSld.set(v,true);
+  val.textContent=fmt(v);
 }
 
 /* ------------------------------------------------------------ */

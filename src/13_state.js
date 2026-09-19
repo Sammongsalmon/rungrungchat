@@ -16,7 +16,7 @@ const S={
   custom:[],
   avatars:{},
   pages:{chat:1, memo:1},
-  scale:2,
+  scale:2, frameR:0,
   fileName:{chat:'',memo:''},
   flip:false, flipIdx:0, statusBar:true, statusTime:'11:34',
   statusAuto:true, statusSkew:0,
@@ -31,7 +31,7 @@ function snap(){
     chat:{units:S.chat.units, rooms:S.chat.rooms, room:S.chat.room, me:S.chat.me,
           roomName:S.chat.roomName, dateLine:S.chat.dateLine},
     memo:S.memo, range:S.range, theme:S.theme, themeId:S.themeId, custom:S.custom,
-    avatars:S.avatars, pages:S.pages, scale:S.scale, fileName:S.fileName,
+    avatars:S.avatars, pages:S.pages, scale:S.scale, frameR:S.frameR, fileName:S.fileName,
     statusBar:S.statusBar, statusTime:S.statusTime,
     statusAuto:S.statusAuto, statusSkew:S.statusSkew,
     panelW:S.panelW, stageH:S.stageH, thFold:S.thFold, mixFold:S.mixFold, thFilter:S.thFilter,
@@ -86,6 +86,7 @@ function load(){
     S.avatars=d.avatars||{};
     S.pages=Object.assign({chat:1,memo:1},d.pages);
     S.scale=(+d.scale===3)?3:2;      /* 1x was dropped — anything else means 2x */
+    S.frameR=clamp(+d.frameR||0,0,36);
     S.fileName=Object.assign({chat:'',memo:''},d.fileName);
     S.statusBar=d.statusBar!==false;
     S.statusTime=d.statusTime||'11:34';

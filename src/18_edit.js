@@ -2,7 +2,7 @@
 /* ============================================================
    RANGE + EDIT LIST
    ============================================================ */
-let rangeSld=null, pagesSld=null;
+let rangeSld=null, pagesSld=null, frameSld=null;
 
 function paintRangeUI(){
   const b=baseList().length||1;
@@ -72,6 +72,22 @@ function paintPagesSlider(){
   else h.textContent='고른 메모 1개를 '+v+'장으로 나눕니다.';
   const sh=$('#sizeHint');
   if(sh) sh.textContent='가로 '+(PV_W*S.scale)+'px 기준으로 저장됩니다.';
+  paintFrameSld();
+}
+
+/* the exported image's own corners — built once, then only kept in sync */
+function paintFrameSld(){
+  const node=$('#frameRSld'), val=$('#frameRVal');
+  if(!node||!val) return;
+  const v=clamp(+S.frameR||0,0,36);
+  S.frameR=v;
+  const fmt=x=>Math.round(x)+'px';
+  if(!frameSld){
+    frameSld=makeSlider(node,{min:0,max:36,step:1,value:v,fmt:fmt,
+      onInput:function(x){ val.textContent=fmt(x); },
+      onChange:function(x){ S.frameR=x; val.textContent=fmt(x); save(); }});
+  }else if(!frameSld.dragging()) frameSld.set(v,true);
+  val.textContent=fmt(v);
 }
 
 /* ------------------------------------------------------------ */

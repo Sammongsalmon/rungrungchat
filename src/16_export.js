@@ -342,9 +342,14 @@ async function exportPNG(){
     for(let i=0;i<live.length;i++){
       busy(true,'이미지를 만드는 중… ('+(i+1)+'/'+live.length+')');
       const tag=$('.page-tag',live[i]); if(tag) tag.style.display='none';
+      /* The preview keeps the soft phone corners because that is what it is showing —
+         a phone. The FILE is a different thing: square by default so it drops into
+         anything without a rounded notch, and rounded only if asked. */
+      const keepR=live[i].style.borderRadius;
+      live[i].style.borderRadius=clamp(+S.frameR||0,0,36)+'px';
       let c;
       try{ c=await nodeToCanvas(live[i],scale); }
-      finally{ if(tag) tag.style.display=''; }
+      finally{ if(tag) tag.style.display=''; live[i].style.borderRadius=keepR; }
       const blob=await canvasToBlob(c);
       const label=live[i].dataset.label||'';
       const nm = live.length>1
