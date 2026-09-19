@@ -280,9 +280,17 @@ function autoName(){
   const t=safeName(S.memo.appTitle||'메모');
   return '룽룽씨_'+t+'_'+stamp;
 }
+/* Every save ends in the time it was made, down to the second — including a name you
+   typed yourself. Two saves in a row would otherwise land on the same filename, and
+   the browser answers that with a re-download prompt or a "(1)" suffix. The pages of
+   ONE export share a second, so they still read as a set. */
+function clockStamp(){
+  const d=new Date(), p=n=>('0'+n).slice(-2);
+  return p(d.getHours())+p(d.getMinutes())+p(d.getSeconds());
+}
 function exportBase(){
   const v=safeName(S.fileName[S.mode]);
-  return v||autoName();
+  return (v||autoName())+'_'+clockStamp();
 }
 
 /* Browsers refuse repeated programmatic downloads, and in-app browsers (KakaoTalk,
