@@ -42,11 +42,12 @@ function clampPages(){
 function paintPagesSlider(){
   const m=Math.max(1,liveList().length);
   const splitRooms = S.mode==='chat' && S.chat.roomMode==='split' && S.chat.rooms.length>1;
-  const lockMulti = splitRooms || (S.mode==='memo' && S.memo.open<0 && (
-      S.memo.exportWhat==='both' ||
-      (S.memo.exportWhat==='detail' && S.memo.sel.length!==1)));
+  /* On the memo side the slider splits the HOME screen and nothing else, so it is
+     dead whenever no home screen is being produced. */
+  const memoHomeless = S.mode==='memo' && S.memo.open<0 && S.memo.exportWhat==='detail';
+  const lockMulti = splitRooms || memoHomeless;
   const max = S.mode==='chat' ? chatMaxPages()
-            : (S.memo.open>=0||S.memo.exportWhat!=='home' ? 40 : m);
+            : (S.memo.open>=0 ? 40 : m);
   const v=clamp(S.pages[S.mode],1,max);
   S.pages[S.mode]=v;
   if(!pagesSld || pagesSld._max!==max){
@@ -63,9 +64,7 @@ function paintPagesSlider(){
   $('#pagesSld').style.pointerEvents=lockMulti?'none':'';
   const h=$('#pagesHint');
   if(splitRooms) h.textContent='대화방 분리 모드에서는 방 개수만큼 자동으로 나뉩니다 — '+max+'장.';
-  else if(lockMulti) h.textContent = S.memo.exportWhat==='both'
-      ? '홈 1장 + 고른 메모 각 1장으로 자동 구성됩니다.'
-      : '고른 메모 1개당 1장으로 저장됩니다. 한 개만 고르면 그 메모를 여러 장으로 나눌 수 있어요.';
+  else if(memoHomeless) h.textContent='메모장 화면만 내보낼 때는 나눌 장수가 없습니다 — 고른 메모 1개당 1장입니다.';
   else if(S.mode==='chat') h.textContent='보낸 사람 단위(말풍선 묶음)로 잘라 같은 높이의 이미지 '+v+'장을 만듭니다. 최대 '+max+'장.';
   else if(S.memo.open>=0) h.textContent='열어 본 메모의 본문을 '+v+'장으로 나눕니다.';
   else if(S.memo.exportWhat==='home') h.textContent='홈 화면을 메모 단위로 잘라 '+v+'장으로 나눕니다. 최대 '+max+'장.';
@@ -73,6 +72,23 @@ function paintPagesSlider(){
   const sh=$('#sizeHint');
   if(sh) sh.textContent='가로 '+(PV_W*S.scale)+'px 기준으로 저장됩니다.';
   paintFrameSld();
+  paintDetailSize();
+}
+
+/* The memo-length choice only means anything when memo screens are actually being
+   produced, so it goes quiet for '메모 홈만'. */
+function paintDetailSize(){
+  const f=$('#detailSizeField'); if(!f) return;
+  const live = S.mode==='memo' && S.memo.open<0 &&
+               (S.memo.exportWhat==='detail'||S.memo.exportWhat==='both');
+  f.style.opacity=live?'':'.4';
+  f.style.pointerEvents=live?'':'none';
+  $$('.choice-b',f).forEach(function(b){ b.classList.toggle('is-on', b.dataset.v===S.memo.detailSize); });
+  const h=$('#detailSizeHint'); if(!h) return;
+  h.textContent = !live ? '메모장 화면을 내보낼 때 쓰입니다.'
+    : (S.memo.detailSize==='match'
+        ? '고른 메모를 모두 가장 긴 메모의 높이에 맞춥니다. 홈 화면과는 맞추지 않습니다.'
+        : '메모마다 제 내용만큼의 길이로 나갑니다.');
 }
 
 /* the exported image's own corners — built once, then only kept in sync */

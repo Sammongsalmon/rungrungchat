@@ -1309,6 +1309,14 @@ html[data-ui="dark"] .toast{color:#15171B}
               </div>
               <p class="hint" id="memoExportHint"></p>
             </div>
+            <div class="field" data-only="memo" id="detailSizeField">
+              <span class="lab">메모장 화면 길이</span>
+              <div class="choice" data-choice="detailSize">
+                <button class="choice-b is-on" data-v="each">메모마다 제 길이</button>
+                <button class="choice-b" data-v="match">가장 긴 메모에 맞춤</button>
+              </div>
+              <p class="hint" id="detailSizeHint"></p>
+            </div>
           </div>
 
           <hr class="hr">
@@ -2429,7 +2437,7 @@ const S={
   v:3, mode:'chat', ui:'light',
   raw:{chat:'',memo:''},
   chat:{ units:[], rooms:[], room:0, roomMode:'one', me:'', roomName:'', dateLine:'' },
-  memo:{ notes:[], style:'list', clip:false, group:'month', sort:'raw', appTitle:'', sel:[], open:-1, pick:false, exportWhat:'home' },
+  memo:{ notes:[], style:'list', clip:false, detailSize:'each', group:'month', sort:'raw', appTitle:'', sel:[], open:-1, pick:false, exportWhat:'home' },
   range:{chat:[1,1], memo:[1,1]},
   theme:{ chat:deep(CHAT_DEF), memo:deep(MEMO_DEF) },
   themeId:'kakao',
@@ -3998,8 +4006,12 @@ function pageWrap(node,label,tag){
 }
 
 /* every exported page must come out the same height: measure, then pad them all up */
-function equalizePages(deck){
-  const pvs=$$('.page > .pv',deck);
+/* `from` scopes the levelling to one group of pages. The memo home and the memo
+   detail screens are different objects and have no reason to share a height — before
+   this they did, because everything in the deck got levelled together. */
+function equalizePages(deck,from){
+  let pvs=$$('.page > .pv',deck);
+  if(from) pvs=pvs.slice(from);
   if(pvs.length<2) return;
   let mx=0;
   pvs.forEach(function(p){ p.style.minHeight=''; });
@@ -4057,7 +4069,8 @@ function buildDeck(){
   const picked=items.filter(n=>S.memo.sel.indexOf(n.id)>=0);
 
   if(what==='home'||what==='both'||!picked.length){
-    const n=(what==='both')?1:clamp(S.pages.memo,1,items.length);
+    /* the page-count slider governs the home screen, and only the home screen */
+    const n=clamp(S.pages.memo,1,items.length);
     if(n<=1){
       deck.appendChild(pageWrap(renderMemoHome(items,{}),'홈',''));
     }else{
@@ -4068,16 +4081,17 @@ function buildDeck(){
       cuts.forEach(function(c,i){
         deck.appendChild(pageWrap(renderMemoHome(items.slice(c[0],c[1]),{}),'홈',(i+1)+' / '+cuts.length));
       });
-      equalizePages(deck);
+      equalizePages(deck);          /* the home pages match each other */
     }
   }
   if((what==='detail'||what==='both') && picked.length){
-    if(picked.length===1 && what==='detail'){
-      addMemoDetailPages(deck,picked[0],clamp(S.pages.memo,1,40));
-    }else{
-      picked.forEach(function(n){ deck.appendChild(pageWrap(renderMemoDetail(n,null,{}),plain(n.title).slice(0,18),plain(n.title).slice(0,14))); });
-      equalizePages(deck);
-    }
+    const before=$$('.page',deck).length;
+    picked.forEach(function(n){
+      deck.appendChild(pageWrap(renderMemoDetail(n,null,{}),plain(n.title).slice(0,18),plain(n.title).slice(0,14)));
+    });
+    /* each memo keeps its own length, or they all rise to the longest — but either
+       way only among themselves, never against the home screen */
+    if(S.memo.detailSize==='match') equalizePages(deck,before);
   }
   return $$('.page',deck).length;
 }
@@ -4148,8 +4162,23 @@ function layoutDeck(animate){
     const padY=(parseFloat(acs.paddingTop)||0)+(parseFloat(acs.paddingBottom)||0);
     const cap=parseFloat(acs.maxHeight);
     const budget=isFinite(cap)?Math.max(160,cap-padY):ah;
-    const s=clamp(Math.min(1,(aw-90)/PV_W,(budget-24)/ph),0.2,1);
-    area.style.minHeight=Math.ceil(ph*s+24+padY)+'px';
+    /* A page that was never split can be many thousands of pixels tall. Shrinking the
+       whole stack until it fits turns it into an unreadable thumbnail, and letting it
+       have the height it wants pushes the controls off the screen — which is how the
+       flip view became unusable on a single long page. So fit the WIDTH, allow only a
+       modest shrink beyond that, and cap the stage at its budget: a very long card is
+       cropped by the stage instead of dragging it down. */
+    const sW=Math.min(1,(aw-90)/PV_W);
+    const sH=(budget-24)/ph;
+    const s=clamp(Math.min(sW, Math.max(sH, sW*0.6)),0.2,1);
+    /* Prop the stage open ONLY where the row is sized to its content — that is the
+       stacked layout, and it is the one that declares a max-height. Where the stage
+       already fills its row (desktop), adding a min-height on top of a budget that
+       excludes padding grows it a little on every pass and walks the controls off the
+       bottom of the screen. */
+    area.style.minHeight = isFinite(cap)
+      ? Math.ceil(Math.min(ph*s+24, budget)+padY)+'px'
+      : '';
     /* drop any leftover strip sizing so the stack centres on the stage */
     fi.style.transform='none'; fi.style.width=''; fi.style.height='';
     fo.style.width=''; fo.style.height='';
@@ -4432,11 +4461,12 @@ function clampPages(){
 function paintPagesSlider(){
   const m=Math.max(1,liveList().length);
   const splitRooms = S.mode==='chat' && S.chat.roomMode==='split' && S.chat.rooms.length>1;
-  const lockMulti = splitRooms || (S.mode==='memo' && S.memo.open<0 && (
-      S.memo.exportWhat==='both' ||
-      (S.memo.exportWhat==='detail' && S.memo.sel.length!==1)));
+  /* On the memo side the slider splits the HOME screen and nothing else, so it is
+     dead whenever no home screen is being produced. */
+  const memoHomeless = S.mode==='memo' && S.memo.open<0 && S.memo.exportWhat==='detail';
+  const lockMulti = splitRooms || memoHomeless;
   const max = S.mode==='chat' ? chatMaxPages()
-            : (S.memo.open>=0||S.memo.exportWhat!=='home' ? 40 : m);
+            : (S.memo.open>=0 ? 40 : m);
   const v=clamp(S.pages[S.mode],1,max);
   S.pages[S.mode]=v;
   if(!pagesSld || pagesSld._max!==max){
@@ -4453,9 +4483,7 @@ function paintPagesSlider(){
   $('#pagesSld').style.pointerEvents=lockMulti?'none':'';
   const h=$('#pagesHint');
   if(splitRooms) h.textContent='대화방 분리 모드에서는 방 개수만큼 자동으로 나뉩니다 — '+max+'장.';
-  else if(lockMulti) h.textContent = S.memo.exportWhat==='both'
-      ? '홈 1장 + 고른 메모 각 1장으로 자동 구성됩니다.'
-      : '고른 메모 1개당 1장으로 저장됩니다. 한 개만 고르면 그 메모를 여러 장으로 나눌 수 있어요.';
+  else if(memoHomeless) h.textContent='메모장 화면만 내보낼 때는 나눌 장수가 없습니다 — 고른 메모 1개당 1장입니다.';
   else if(S.mode==='chat') h.textContent='보낸 사람 단위(말풍선 묶음)로 잘라 같은 높이의 이미지 '+v+'장을 만듭니다. 최대 '+max+'장.';
   else if(S.memo.open>=0) h.textContent='열어 본 메모의 본문을 '+v+'장으로 나눕니다.';
   else if(S.memo.exportWhat==='home') h.textContent='홈 화면을 메모 단위로 잘라 '+v+'장으로 나눕니다. 최대 '+max+'장.';
@@ -4463,6 +4491,23 @@ function paintPagesSlider(){
   const sh=$('#sizeHint');
   if(sh) sh.textContent='가로 '+(PV_W*S.scale)+'px 기준으로 저장됩니다.';
   paintFrameSld();
+  paintDetailSize();
+}
+
+/* The memo-length choice only means anything when memo screens are actually being
+   produced, so it goes quiet for '메모 홈만'. */
+function paintDetailSize(){
+  const f=$('#detailSizeField'); if(!f) return;
+  const live = S.mode==='memo' && S.memo.open<0 &&
+               (S.memo.exportWhat==='detail'||S.memo.exportWhat==='both');
+  f.style.opacity=live?'':'.4';
+  f.style.pointerEvents=live?'':'none';
+  $$('.choice-b',f).forEach(function(b){ b.classList.toggle('is-on', b.dataset.v===S.memo.detailSize); });
+  const h=$('#detailSizeHint'); if(!h) return;
+  h.textContent = !live ? '메모장 화면을 내보낼 때 쓰입니다.'
+    : (S.memo.detailSize==='match'
+        ? '고른 메모를 모두 가장 긴 메모의 높이에 맞춥니다. 홈 화면과는 맞추지 않습니다.'
+        : '메모마다 제 내용만큼의 길이로 나갑니다.');
 }
 
 /* the exported image's own corners — built once, then only kept in sync */
@@ -5516,6 +5561,9 @@ function wire(){
   paintMemoClip();
   bindChoice('memoGroup',()=>S.memo.group,function(v){ S.memo.group=v; renderAll(); });
   bindChoice('memoSort',()=>S.memo.sort,function(v){ S.memo.sort=v; S.memo.open=-1; paintEditList(); paintRangeUI(); renderAll(); });
+  bindChoice('detailSize',()=>S.memo.detailSize,function(v){
+    S.memo.detailSize=v; renderAll(); save();
+  });
   bindChoice('memoExport',()=>S.memo.exportWhat,function(v){
     S.memo.exportWhat=v;
     /* the detail screens come from cards picked on the home, so open picking for them */

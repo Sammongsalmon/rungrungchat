@@ -9,7 +9,7 @@ const S={
   v:3, mode:'chat', ui:'light',
   raw:{chat:'',memo:''},
   chat:{ units:[], rooms:[], room:0, roomMode:'one', me:'', roomName:'', dateLine:'' },
-  memo:{ notes:[], style:'list', clip:false, group:'month', sort:'raw', appTitle:'', sel:[], open:-1, pick:false, exportWhat:'home' },
+  memo:{ notes:[], style:'list', clip:false, detailSize:'each', group:'month', sort:'raw', appTitle:'', sel:[], open:-1, pick:false, exportWhat:'home' },
   range:{chat:[1,1], memo:[1,1]},
   theme:{ chat:deep(CHAT_DEF), memo:deep(MEMO_DEF) },
   themeId:'kakao',

@@ -15,8 +15,12 @@ function pageWrap(node,label,tag){
 }
 
 /* every exported page must come out the same height: measure, then pad them all up */
-function equalizePages(deck){
-  const pvs=$$('.page > .pv',deck);
+/* `from` scopes the levelling to one group of pages. The memo home and the memo
+   detail screens are different objects and have no reason to share a height — before
+   this they did, because everything in the deck got levelled together. */
+function equalizePages(deck,from){
+  let pvs=$$('.page > .pv',deck);
+  if(from) pvs=pvs.slice(from);
   if(pvs.length<2) return;
   let mx=0;
   pvs.forEach(function(p){ p.style.minHeight=''; });
@@ -74,7 +78,8 @@ function buildDeck(){
   const picked=items.filter(n=>S.memo.sel.indexOf(n.id)>=0);
 
   if(what==='home'||what==='both'||!picked.length){
-    const n=(what==='both')?1:clamp(S.pages.memo,1,items.length);
+    /* the page-count slider governs the home screen, and only the home screen */
+    const n=clamp(S.pages.memo,1,items.length);
     if(n<=1){
       deck.appendChild(pageWrap(renderMemoHome(items,{}),'홈',''));
     }else{
@@ -85,16 +90,17 @@ function buildDeck(){
       cuts.forEach(function(c,i){
         deck.appendChild(pageWrap(renderMemoHome(items.slice(c[0],c[1]),{}),'홈',(i+1)+' / '+cuts.length));
       });
-      equalizePages(deck);
+      equalizePages(deck);          /* the home pages match each other */
     }
   }
   if((what==='detail'||what==='both') && picked.length){
-    if(picked.length===1 && what==='detail'){
-      addMemoDetailPages(deck,picked[0],clamp(S.pages.memo,1,40));
-    }else{
-      picked.forEach(function(n){ deck.appendChild(pageWrap(renderMemoDetail(n,null,{}),plain(n.title).slice(0,18),plain(n.title).slice(0,14))); });
-      equalizePages(deck);
-    }
+    const before=$$('.page',deck).length;
+    picked.forEach(function(n){
+      deck.appendChild(pageWrap(renderMemoDetail(n,null,{}),plain(n.title).slice(0,18),plain(n.title).slice(0,14)));
+    });
+    /* each memo keeps its own length, or they all rise to the longest — but either
+       way only among themselves, never against the home screen */
+    if(S.memo.detailSize==='match') equalizePages(deck,before);
   }
   return $$('.page',deck).length;
 }
@@ -165,8 +171,23 @@ function layoutDeck(animate){
     const padY=(parseFloat(acs.paddingTop)||0)+(parseFloat(acs.paddingBottom)||0);
     const cap=parseFloat(acs.maxHeight);
     const budget=isFinite(cap)?Math.max(160,cap-padY):ah;
-    const s=clamp(Math.min(1,(aw-90)/PV_W,(budget-24)/ph),0.2,1);
-    area.style.minHeight=Math.ceil(ph*s+24+padY)+'px';
+    /* A page that was never split can be many thousands of pixels tall. Shrinking the
+       whole stack until it fits turns it into an unreadable thumbnail, and letting it
+       have the height it wants pushes the controls off the screen — which is how the
+       flip view became unusable on a single long page. So fit the WIDTH, allow only a
+       modest shrink beyond that, and cap the stage at its budget: a very long card is
+       cropped by the stage instead of dragging it down. */
+    const sW=Math.min(1,(aw-90)/PV_W);
+    const sH=(budget-24)/ph;
+    const s=clamp(Math.min(sW, Math.max(sH, sW*0.6)),0.2,1);
+    /* Prop the stage open ONLY where the row is sized to its content — that is the
+       stacked layout, and it is the one that declares a max-height. Where the stage
+       already fills its row (desktop), adding a min-height on top of a budget that
+       excludes padding grows it a little on every pass and walks the controls off the
+       bottom of the screen. */
+    area.style.minHeight = isFinite(cap)
+      ? Math.ceil(Math.min(ph*s+24, budget)+padY)+'px'
+      : '';
     /* drop any leftover strip sizing so the stack centres on the stage */
     fi.style.transform='none'; fi.style.width=''; fi.style.height='';
     fo.style.width=''; fo.style.height='';

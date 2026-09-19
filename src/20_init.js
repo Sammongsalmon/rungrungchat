@@ -135,6 +135,9 @@ function wire(){
   paintMemoClip();
   bindChoice('memoGroup',()=>S.memo.group,function(v){ S.memo.group=v; renderAll(); });
   bindChoice('memoSort',()=>S.memo.sort,function(v){ S.memo.sort=v; S.memo.open=-1; paintEditList(); paintRangeUI(); renderAll(); });
+  bindChoice('detailSize',()=>S.memo.detailSize,function(v){
+    S.memo.detailSize=v; renderAll(); save();
+  });
   bindChoice('memoExport',()=>S.memo.exportWhat,function(v){
     S.memo.exportWhat=v;
     /* the detail screens come from cards picked on the home, so open picking for them */
