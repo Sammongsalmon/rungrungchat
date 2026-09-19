@@ -20,7 +20,7 @@ const MEMO_DEF={
   cardBg:'#F7F7FA', titleCol:'#111114', bodyCol:'#3C3C43', subCol:'#8A8A8E',
   accent:'#F0B429', tagBg:'#FDF2D8', tagText:'#8A6100',
   bg2auto:true,
-  radius:14, fontSize:15, titleSize:22, listTitleSize:15.5, subSize:12.5, bigSize:31, barSize:16.5,
+  radius:14, fontSize:12, titleSize:17.5, listTitleSize:12.5, subSize:10, bigSize:25, barSize:13,
   paper:'none', statusDark:true, showSearch:true, showHome:true
 };
 
@@ -166,7 +166,7 @@ function themeFromPalette(id,name,pal,opt){
     cardBg:card, titleCol:ensure(mtitle,card,6.4), bodyCol:ensure(mix(mtitle,card,0.22),card,4.8),
     subCol:ensure(mix(mtitle,card,0.46),card,3.3),
     accent:vividOn(acc,card,2.6,dark), tagBg:fitFill(mix(card,vivid(acc,dark),dark?0.32:0.30),5.2), tagText:'',
-    radius:14, fontSize:15, titleSize:22, listTitleSize:15.5, subSize:12.5, bigSize:31, barSize:16.5,
+    radius:14, fontSize:12, titleSize:17.5, listTitleSize:12.5, subSize:10, bigSize:25, barSize:13,
     paper:'none', statusDark:!dark, showSearch:true, showHome:true
   };
   memo.tagText=ensure(readable(memo.tagBg),memo.tagBg,4.6);

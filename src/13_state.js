@@ -26,7 +26,7 @@ const S={
 
 function snap(){
   return {
-    v:3, mode:S.mode, ui:S.ui, raw:S.raw,
+    v:4, mode:S.mode, ui:S.ui, raw:S.raw,
     chat:{units:S.chat.units, rooms:S.chat.rooms, room:S.chat.room, me:S.chat.me,
           roomName:S.chat.roomName, dateLine:S.chat.dateLine},
     memo:S.memo, range:S.range, theme:S.theme, themeId:S.themeId, custom:S.custom,
@@ -64,6 +64,19 @@ function load(){
              memo:Object.assign(deep(MEMO_DEF),(d.theme||{}).memo||{})};
     S.themeId=d.themeId||'kakao';
     S.custom=Array.isArray(d.custom)?d.custom:[];
+    /* v4 re-scaled every memo text size to 0.8. A profile saved before that carries
+       the old sizes, so scale them once here — multiplied, not overwritten, so a size
+       the user had tuned themselves keeps its proportion. */
+    if((d.v||0)<4){
+      const shrink=function(m){
+        if(!m) return;
+        ['fontSize','titleSize','listTitleSize','subSize','bigSize','barSize'].forEach(function(k){
+          if(typeof m[k]==='number' && m[k]>0) m[k]=Math.round(m[k]*0.8*2)/2;
+        });
+      };
+      shrink(S.theme.memo);
+      S.custom.forEach(function(t){ shrink(t&&t.memo); });
+    }
     S.avatars=d.avatars||{};
     S.pages=Object.assign({chat:1,memo:1},d.pages);
     S.scale=d.scale||2;
