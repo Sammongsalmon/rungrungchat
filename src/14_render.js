@@ -281,6 +281,10 @@ function memoBodyNode(note,t,limit){
 
 /* toggle a card's picked state in place — rebuilding the deck for every tap
    throws away scroll position and flashes the whole preview */
+/* The tag sits a step below the preview, and follows the theme rather than a fixed
+   pixel size (0.85 x the sub size is the 8.9px the card layout always used). */
+function tagSize(t){ return Math.max(7, Math.round((t.subSize||10.5)*0.85*10)/10); }
+
 function markMemoCard(card,picked){
   const t=S.theme.memo;
   card.classList.toggle('sel',picked);
@@ -345,7 +349,8 @@ function renderMemoHome(notes,opt){
       c.dataset.note=n.id; c.dataset.u=n.id;
       c.style.background=t.cardBg; c.style.borderRadius=t.radius+'px'; c.style.color=t.accent;
       const tm=el('div','mc-t',memoTimeLabel(n)); tm.style.color=t.subCol; c.appendChild(tm);
-      if(n.tag){ const g2=el('span','mc-tag',n.tag); g2.style.background=t.tagBg; g2.style.color=t.tagText; c.appendChild(g2); }
+      if(n.tag){ const g2=el('span','mc-tag',n.tag); g2.style.background=t.tagBg; g2.style.color=t.tagText;
+                 g2.style.fontSize=tagSize(t)+'px'; c.appendChild(g2); }
       const ti=el('div','mc-title rt'); ti.innerHTML=richHTML(n.title)||'제목 없음';
       ti.style.color=t.titleCol; ti.style.fontSize=(t.listTitleSize||13)+'px'; c.appendChild(ti);
       let rest=n;
@@ -380,12 +385,15 @@ function renderMemoHome(notes,opt){
       const ti=el('div','mr-t rt'); ti.innerHTML=richHTML(n.title)||'제목 없음';
       ti.style.color=t.titleCol; ti.style.fontSize=(t.listTitleSize||13)+'px'; r.appendChild(ti);
       const m=el('div','mr-m'); m.style.fontSize=(t.subSize||10.5)+'px';
-      const dd=el('div','mr-d',memoShortLabel(n)); dd.style.color=t.bodyCol; m.appendChild(dd);
+      /* Date and preview are one secondary line, as in iOS Notes. The date used to be
+         painted in the body colour — darker than the preview beside it and nearly as
+         strong as the title above it, which read as a second heading. */
+      const dd=el('div','mr-d',memoShortLabel(n)); dd.style.color=t.subCol; m.appendChild(dd);
       const ss=el('div','mr-s rt'); ss.innerHTML=richHTML(subText(n.sub)||plain(n.body).slice(0,60))||'추가 텍스트 없음';
-      ss.style.color=t.subCol; m.appendChild(ss);
+      ss.style.color=rgba(t.subCol,0.86); m.appendChild(ss);
       r.appendChild(m);
       if(n.tag){ const g2=el('span','mc-tag',n.tag); g2.style.background=t.tagBg; g2.style.color=t.tagText;
-                 g2.style.marginTop='6px'; r.appendChild(g2); }
+                 g2.style.fontSize=tagSize(t)+'px'; r.appendChild(g2); }
       if(picked){ const mk=el('div','mv-selmark'); mk.style.position='static'; mk.style.marginTop='7px';
                   mk.style.background=t.accent; mk.appendChild(lineIco('check',11,readable(t.accent),3)); r.appendChild(mk); }
       host.appendChild(r);
