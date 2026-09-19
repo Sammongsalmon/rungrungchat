@@ -347,32 +347,6 @@ function colorControl(label,get,set,against,minRatio){
   return root;
 }
 
-function colorRow(label,get,set,warnAgainst){
-  const r=el('div','col-row');
-  const sw=el('label','col-sw');
-  const fillN=el('i'); sw.appendChild(fillN);
-  const inp=document.createElement('input'); inp.type='color'; sw.appendChild(inp);
-  r.appendChild(sw);
-  const lb=el('div','col-lab',label); r.appendChild(lb);
-  const hexI=document.createElement('input'); hexI.className='col-hex'; hexI.spellcheck=false; r.appendChild(hexI);
-
-  const paint=function(){
-    const v=hx(get())||'#000000';
-    fillN.style.background=v; inp.value=v;
-    if(document.activeElement!==hexI) hexI.value=v;
-    if(warnAgainst){
-      const bg=warnAgainst(); const c=contrast(v,bg);
-      lb.style.color = c<3 ? 'var(--danger)' : '';
-      lb.title = c<3 ? ('대비 '+c.toFixed(1)+':1 — 읽기 어려울 수 있습니다') : '';
-    }
-  };
-  on(inp,'input',function(){ set(hx(inp.value)); paint(); });
-  on(hexI,'change',function(){ const v=hx(hexI.value); if(v){ set(v); } paint(); });
-  on(hexI,'blur',paint);
-  paint(); r._sync=paint;
-  return r;
-}
-
 /* ------------------------------------------------------------
    toast / modal / busy
    ------------------------------------------------------------ */

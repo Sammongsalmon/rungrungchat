@@ -10,7 +10,7 @@ const CHAT_DEF={
   misBg:'#E0453A', misText:'#FFFFFF',
   bg2auto:true,
   radius:16, fontSize:15, nameSize:12.5, timeSize:10.5, barSize:16.5,
-  tail:true, avatar:true, avatarR:14, avatarSize:38,
+  tail:true, avatar:true, avatarText:true, avatarR:14, avatarSize:38,
   showInput:true, inputBg:'#FFFFFF', showHome:true, statusDark:true,
   showRead:true, readLabel:'읽음', readCol:'#F5C400'
 };
@@ -127,7 +127,7 @@ function themeFromPalette(id,name,pal,opt){
     dateBg:fitFill(dark?mix(bg,'#FFFFFF',0.13):mix(bg,s[0],0.28),4.6),
     dateText:'', misBg:fitFill(acc,5.2), misText:'',
     radius:opt.radius||16, fontSize:15, nameSize:12.5, timeSize:10.5, barSize:16.5,
-    tail:opt.tail!==false, avatar:true, avatarR:14, avatarSize:38,
+    tail:opt.tail!==false, avatar:true, avatarText:true, avatarR:14, avatarSize:38,
     showInput:true, inputBg: dark?mix(bg,'#FFFFFF',0.09):mix(bar,'#FFFFFF',0.6),
     showHome:true, statusDark:!dark, showRead:true, readLabel:'읽음', readCol:ensure(acc,bg,2.4)
   };

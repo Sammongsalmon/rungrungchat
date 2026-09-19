@@ -137,9 +137,24 @@ function nameHue(n){
   for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))>>>0;
   return h%360;
 }
+/* The default follows the theme: take the theme's own identity colour and fan the
+   cast out around its hue, so a room's avatars read as part of the palette instead of
+   a random rainbow. A colour the user picked by hand always wins over this. */
+function themeAvatarCol(name){
+  const t=(S.theme&&S.theme.chat)||{};
+  const base=hx(t.meBg)||hx(t.bg1)||'#8A8A8E';
+  const H=hsl(base);
+  const k=nameHue(name)/360;                       /* stable 0..1 per name */
+  const dark=lum(hx(t.bg1)||'#FFFFFF')<0.42;
+  return fromHsl(H[0]+(k*2-1)*24,
+                 clamp(H[1]*0.86+0.10,0.20,0.78),
+                 dark ? clamp(0.46+k*0.16,0.40,0.66) : clamp(0.36+k*0.16,0.30,0.56));
+}
 function avatarFor(name){
   const a=S.avatars[name]||{};
-  return { img:a.img||'', col:a.col||fromHsl(nameHue(name),0.42,0.56), ini:(String(name||'?').trim()[0]||'?') };
+  const col=a.col||themeAvatarCol(name);
+  return { img:a.img||'', col:col, ini:(String(name||'?').trim()[0]||'?'),
+           txt:ensure(readable(col),col,4.5), custom:!!a.col };
 }
 function participants(){
   const set={}, out=[];

@@ -104,7 +104,10 @@ function avatarNode(name,t){
   n.style.width=sz+'px'; n.style.height=sz+'px'; n.style.fontSize=Math.round(sz*0.4)+'px';
   n.style.borderRadius=(t.avatarR>=50?'50%':t.avatarR+'px');
   if(a.img){ n.style.backgroundImage='url("'+a.img+'")'; }
-  else { n.style.background=a.col; n.textContent=a.ini; }
+  else {
+    n.style.background=a.col;
+    if(t.avatarText!==false){ n.textContent=a.ini; n.style.color=a.txt; }
+  }
   return n;
 }
 

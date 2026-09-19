@@ -341,6 +341,70 @@ function autoGradFor(t){
   const accent = S.mode==='chat' ? t.meBg : t.accent;
   return autoGrad(t.bg1, accent, lum(t.bg1)<0.42);
 }
+/* Profile sits at the top of 직접 꾸미기: it is the thing people reach for first, and
+   it is per-person rather than per-surface, so it does not belong among the surface
+   folds further down. */
+function avatarFold(){
+  const t=()=>T();
+  const ppl=participants();
+  const av=fold('프로필', ppl.length?avatarFor(ppl[0]).col:'#9AA1AB', true);
+  av._body.appendChild(swField('프로필 사진 표시','','avatar'));
+  av._body.appendChild(switchRow('이름 첫 글자','사진이 없을 때 동그라미 안에 첫 글자를 넣습니다',
+    ()=>t().avatarText!==false,
+    function(v){ t().avatarText=v; renderAll(); paintThemeGrid(); save(); }));
+  av._body.appendChild(sldField('크기',()=>t().avatarSize,v=>{t().avatarSize=v;},26,52,1,'px'));
+  av._body.appendChild(sldField('모서리',()=>t().avatarR,v=>{t().avatarR=v;},0,99,1,'px'));
+
+  if(!ppl.length){
+    av._body.appendChild(el('p','hint','대화를 붙여넣으면 인물마다 색과 사진을 정할 수 있습니다.'));
+    return av;
+  }
+  const note=el('p','hint');
+  note.innerHTML='색을 따로 고르지 않은 인물은 <b>테마색을 따라갑니다.</b>';
+  note.style.margin='2px 0 10px';
+  av._body.appendChild(note);
+
+  ppl.forEach(function(p){
+    const a=avatarFor(p);
+    av._body.appendChild(colorControl(p, ()=>avatarFor(p).col,
+      function(v,live){
+        S.avatars[p]=Object.assign({},S.avatars[p],{col:v});
+        if(live) renderSoon(); else { renderAll(); paintThemeEditor(true); }
+        save();
+      }, ()=>t().bg1, 2.2));
+
+    const row=el('div','btn-row'); row.style.margin='-4px 0 13px';
+    const pk=el('button','btn sm');
+    pk.innerHTML=ico('image',15)+(a.img?'사진 바꾸기':'사진 넣기');
+    on(pk,'click',function(){
+      pickImage(320,function(d){
+        S.avatars[p]=Object.assign({},S.avatars[p],{img:d});
+        renderAll(); save(); paintThemeEditor(true);
+      });
+    });
+    row.appendChild(pk);
+    if(a.img){
+      const rm=el('button','btn sm ghost danger','사진 제거');
+      on(rm,'click',function(){
+        if(S.avatars[p]) delete S.avatars[p].img;
+        renderAll(); save(); paintThemeEditor(true);
+      });
+      row.appendChild(rm);
+    }
+    if(a.custom){
+      const rc=el('button','btn sm ghost','테마색으로');
+      on(rc,'click',function(){
+        if(S.avatars[p]) delete S.avatars[p].col;
+        renderAll(); save(); paintThemeEditor(true);
+        toast(p+' 색을 테마색으로 되돌렸습니다');
+      });
+      row.appendChild(rc);
+    }
+    av._body.appendChild(row);
+  });
+  return av;
+}
+
 function paintThemeEditor(force){
   const box=$('#thEditor'); if(!box) return;
   const key=S.mode+'|'+S.themeId+'|'+participants().join(',');
@@ -356,6 +420,8 @@ function paintThemeEditor(force){
   fixBtn.style.marginBottom='12px';
   on(fixBtn,'click',fixReadability);
   box.appendChild(fixBtn);
+
+  if(S.mode==='chat') box.appendChild(avatarFold());
 
   const bgFold=fold('배경', t().bg1, true);
   bgFold._body.appendChild(choiceRow('방식',[['solid','단색'],['grad','그라데이션'],['img','이미지']],
@@ -445,33 +511,6 @@ function paintThemeEditor(force){
     dt._body.appendChild(colField('잘못보냄 배경','misBg'));
     dt._body.appendChild(colField('잘못보냄 글자','misText','misBg'));
     box.appendChild(dt);
-
-    const av=fold('프로필', '#9AA1AB', false);
-    av._body.appendChild(swField('프로필 사진 표시','','avatar'));
-    av._body.appendChild(sldField('크기',()=>t().avatarSize,v=>{t().avatarSize=v;},26,52,1,'px'));
-    av._body.appendChild(sldField('모서리',()=>t().avatarR,v=>{t().avatarR=v;},0,99,1,'px'));
-    participants().forEach(function(p){
-      const r=el('div','col-row');
-      const a=avatarFor(p);
-      const sw=el('div','col-sw'); const fi=el('i');
-      if(a.img) fi.style.backgroundImage='url("'+a.img+'")', fi.style.backgroundSize='cover';
-      else fi.style.background=a.col;
-      sw.appendChild(fi); sw.style.cursor='pointer';
-      on(sw,'click',function(){ pickImage(320,function(d){ S.avatars[p]=Object.assign({},S.avatars[p],{img:d}); renderAll(); save(); paintThemeEditor(true); }); });
-      r.appendChild(sw);
-      r.appendChild(el('div','col-lab',p));
-      const cw=document.createElement('input'); cw.type='color'; cw.className='col-hex';
-      cw.style.padding='2px'; cw.style.width='44px'; cw.style.height='30px'; cw.value=a.col;
-      on(cw,'input',function(){ S.avatars[p]=Object.assign({},S.avatars[p],{col:hx(cw.value)}); renderSoon(); save(); });
-      r.appendChild(cw);
-      if(a.img){
-        const x=el('button','mini'); x.innerHTML=ico('x',14); x.style.cssText='width:30px;height:30px;border-radius:7px;color:var(--text-3)';
-        on(x,'click',function(){ if(S.avatars[p]) delete S.avatars[p].img; renderAll(); save(); paintThemeEditor(true); });
-        r.appendChild(x);
-      }
-      av._body.appendChild(r);
-    });
-    box.appendChild(av);
 
     const fr=fold('화면 구성', '#9AA1AB', false);
     fr._body.appendChild(swField('입력창 표시','아래쪽 메시지 입력 바','showInput'));
