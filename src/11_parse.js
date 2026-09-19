@@ -219,10 +219,14 @@ function memoShortLabel(n){
   if(!n.mo) return n.when||'';
   return n.mo+'월 '+n.dy+'일';
 }
+/* A note card showed the time and dropped the date, so every card read "오전 2:31"
+   with no idea which day. Show both when both are known. */
 function memoTimeLabel(n){
-  if(n.hh<0) return memoShortLabel(n);
+  const d=memoShortLabel(n);
+  if(n.hh<0) return d;
   const ap=n.hh<12?'오전':'오후', h=n.hh%12===0?12:n.hh%12;
-  return ap+' '+h+':'+('0'+n.mi).slice(-2);
+  const t=ap+' '+h+':'+('0'+n.mi).slice(-2);
+  return d ? d+' '+t : t;
 }
 
 /* ---- memo body -> blocks (paragraph / list item) ---- */

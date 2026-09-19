@@ -227,10 +227,13 @@
   font-size:11.5px;font-weight:700;letter-spacing:-.008em}
 .mv-d .md-title{font-size:22px;font-weight:800;letter-spacing:-.03em;line-height:1.3;margin-bottom:10px}
 .mv-d .md-body{font-size:15px;line-height:1.66;letter-spacing:-.014em;white-space:pre-wrap;word-break:break-word}
-.mv-d .md-li{display:flex;gap:8px;margin:2px 0}
-.mv-d .md-li .li-b{flex:0 0 auto;font-weight:700;opacity:.55}
-.mv-d .md-li .li-c{flex:1 1 auto;min-width:0}
-.mv-d .md-cb{flex:0 0 auto;width:17px;height:17px;border-radius:99px;margin-top:3px;
+/* These were scoped to .mv-d, but the home cards render the same list markup through
+   memoBodyNode — so on a card every bullet fell to its own line above its text. The
+   rules belong to the list item, not to the screen it happens to be on. */
+.md-li{display:flex;gap:8px;margin:2px 0}
+.md-li .li-b{flex:0 0 auto;font-weight:700;opacity:.55}
+.md-li .li-c{flex:1 1 auto;min-width:0}
+.md-cb{flex:0 0 auto;width:17px;height:17px;border-radius:99px;margin-top:3px;
   display:grid;place-items:center}
 .mv-paper{position:absolute;inset:0;z-index:0;pointer-events:none}
 
@@ -248,3 +251,8 @@
 .rt .fs-xl{font-size:1.32em}
 .rt .fs-xxl{font-size:1.55em}
 .cp-done-row{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+
+/* '긴 내용 생략' — a 2-up tile takes a photo's proportions and cuts what will not fit;
+   the single-column card keeps its own height and only clamps its body. */
+.mv-cards.is-clip.g2 .mv-card{aspect-ratio:1/1;overflow:hidden}
+.mv-cards.is-clip.g2 .mc-body{min-height:0}

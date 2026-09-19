@@ -988,10 +988,13 @@ html[data-ui="dark"] .toast{color:#15171B}
   font-size:11.5px;font-weight:700;letter-spacing:-.008em}
 .mv-d .md-title{font-size:22px;font-weight:800;letter-spacing:-.03em;line-height:1.3;margin-bottom:10px}
 .mv-d .md-body{font-size:15px;line-height:1.66;letter-spacing:-.014em;white-space:pre-wrap;word-break:break-word}
-.mv-d .md-li{display:flex;gap:8px;margin:2px 0}
-.mv-d .md-li .li-b{flex:0 0 auto;font-weight:700;opacity:.55}
-.mv-d .md-li .li-c{flex:1 1 auto;min-width:0}
-.mv-d .md-cb{flex:0 0 auto;width:17px;height:17px;border-radius:99px;margin-top:3px;
+/* These were scoped to .mv-d, but the home cards render the same list markup through
+   memoBodyNode — so on a card every bullet fell to its own line above its text. The
+   rules belong to the list item, not to the screen it happens to be on. */
+.md-li{display:flex;gap:8px;margin:2px 0}
+.md-li .li-b{flex:0 0 auto;font-weight:700;opacity:.55}
+.md-li .li-c{flex:1 1 auto;min-width:0}
+.md-cb{flex:0 0 auto;width:17px;height:17px;border-radius:99px;margin-top:3px;
   display:grid;place-items:center}
 .mv-paper{position:absolute;inset:0;z-index:0;pointer-events:none}
 
@@ -1009,6 +1012,11 @@ html[data-ui="dark"] .toast{color:#15171B}
 .rt .fs-xl{font-size:1.32em}
 .rt .fs-xxl{font-size:1.55em}
 .cp-done-row{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+
+/* '긴 내용 생략' — a 2-up tile takes a photo's proportions and cuts what will not fit;
+   the single-column card keeps its own height and only clamps its body. */
+.mv-cards.is-clip.g2 .mv-card{aspect-ratio:1/1;overflow:hidden}
+.mv-cards.is-clip.g2 .mc-body{min-height:0}
 
 /* ============================================================
    10. FIT WRAPPER (preview auto-scale)
@@ -1824,10 +1832,14 @@ function memoShortLabel(n){
   if(!n.mo) return n.when||'';
   return n.mo+'월 '+n.dy+'일';
 }
+/* A note card showed the time and dropped the date, so every card read "오전 2:31"
+   with no idea which day. Show both when both are known. */
 function memoTimeLabel(n){
-  if(n.hh<0) return memoShortLabel(n);
+  const d=memoShortLabel(n);
+  if(n.hh<0) return d;
   const ap=n.hh<12?'오전':'오후', h=n.hh%12===0?12:n.hh%12;
-  return ap+' '+h+':'+('0'+n.mi).slice(-2);
+  const t=ap+' '+h+':'+('0'+n.mi).slice(-2);
+  return d ? d+' '+t : t;
 }
 
 /* ---- memo body -> blocks (paragraph / list item) ---- */
@@ -2928,6 +2940,11 @@ function bodyAfterSub(note){
   for(let i=0;i<bl.length;i++){ if(bl[i].trim()!==''){ return bl.slice(i+1).join('\n'); } }
   return '';
 }
+/* The preview line is a taste of the note, not a list item: a leading "- " sitting
+   next to properly drawn bullets just looks like a typo. */
+function subText(v){
+  return String(v||'').replace(/^\s*(?:[-–—*·•]|\[[ xX]?\])\s+/,'');
+}
 function memoBodyNode(note,t,limit){
   const wrap=el('div','md-body rt');
   wrap.style.color=t.bodyCol; wrap.style.fontSize=t.fontSize+'px';
@@ -3025,21 +3042,24 @@ function renderMemoHome(notes,opt){
       const ti=el('div','mc-title rt'); ti.innerHTML=richHTML(n.title)||'제목 없음';
       ti.style.color=t.titleCol; ti.style.fontSize=(t.listTitleSize||13)+'px'; c.appendChild(ti);
       let rest=n;
-      if(n.sub){ const sb=el('div','mc-sub rt'); sb.innerHTML=richHTML(n.sub);
+      if(n.sub){ const sb=el('div','mc-sub rt'); sb.innerHTML=richHTML(subText(n.sub));
                  sb.style.color=t.subCol; sb.style.fontSize=(t.subSize||10.5)+'px'; c.appendChild(sb);
                  rest=Object.assign({},n,{body:bodyAfterSub(n)}); }
-      const lines=S.memo.style==='grid'?4:6;
-      /* Off: keep the old block cap — it trims to whole paragraphs, quietly.
-         On: hand over EVERY block and let the line clamp do the cutting, because that
-         is what draws the ellipsis. Capping blocks first would drop the tail with no
-         sign that anything was left out, and a single long paragraph would still run
-         past the others. */
-      const bd=memoBodyNode(rest,t,S.memo.clip?0:lines);
+      /* Off: the old block cap — trims to whole paragraphs, quietly.
+         On: hand over EVERY block and let a LINE clamp do the cutting, because that is
+         what draws the ellipsis. Capping blocks first drops the tail with no sign that
+         anything was left out.
+         A card keeps its natural height: one or two lines stay one or two lines, and
+         anything longer stops at two. Levelling every card to the tallest is what left
+         those long empty stretches. The 2-up grid is the exception — it is a tile, so
+         it holds a photo's proportions and simply cuts at the bottom. */
+      const grid=S.memo.style==='grid';
+      const bd=memoBodyNode(rest,t,S.memo.clip?0:(grid?4:6));
       bd.classList.add('mc-body');
       if(S.memo.clip){
         bd.style.display='-webkit-box';
         bd.style.webkitBoxOrient='vertical';
-        bd.style.webkitLineClamp=String(lines);
+        bd.style.webkitLineClamp=grid?'6':'2';
         bd.style.overflow='hidden';
       }
       bd.style.fontSize=Math.max(8,(t.fontSize-2.5)*0.85)+'px'; bd.style.color=rgba(t.bodyCol,0.88);
@@ -3054,7 +3074,7 @@ function renderMemoHome(notes,opt){
       ti.style.color=t.titleCol; ti.style.fontSize=(t.listTitleSize||13)+'px'; r.appendChild(ti);
       const m=el('div','mr-m'); m.style.fontSize=(t.subSize||10.5)+'px';
       const dd=el('div','mr-d',memoShortLabel(n)); dd.style.color=t.bodyCol; m.appendChild(dd);
-      const ss=el('div','mr-s rt'); ss.innerHTML=richHTML(n.sub||plain(n.body).slice(0,60))||'추가 텍스트 없음';
+      const ss=el('div','mr-s rt'); ss.innerHTML=richHTML(subText(n.sub)||plain(n.body).slice(0,60))||'추가 텍스트 없음';
       ss.style.color=t.subCol; m.appendChild(ss);
       r.appendChild(m);
       if(n.tag){ const g2=el('span','mc-tag',n.tag); g2.style.background=t.tagBg; g2.style.color=t.tagText;
@@ -4222,21 +4242,6 @@ function layoutDeck(animate){
    MASTER RENDER
    ============================================================ */
 let renderLock=false;
-/* With the clamp on, every card shows the same number of lines at most — but a card
-   with two lines is still shorter than one with six. Level them to the tallest on the
-   same page so the grid reads as a grid. Measured after layout, because that is the
-   only moment the real heights exist. */
-function equalizeMemoCards(){
-  $$('#deck .mv-cards.is-clip').forEach(function(host){
-    const cards=$$('.mv-card',host);
-    if(cards.length<2) return;
-    cards.forEach(function(c){ c.style.minHeight=''; });
-    let tall=0;
-    cards.forEach(function(c){ tall=Math.max(tall,c.offsetHeight); });
-    if(tall>0) cards.forEach(function(c){ c.style.minHeight=tall+'px'; });
-  });
-}
-
 function renderAll(){
   if(renderLock) return;
   renderLock=true;
@@ -4244,7 +4249,6 @@ function renderAll(){
   const keepT=area?area.scrollTop:0, keepL=area?area.scrollLeft:0;
   try{
     const n=buildDeck();
-    equalizeMemoCards();
     S.flipIdx=clamp(S.flipIdx,0,Math.max(0,n-1));
     layoutDeck(false);
     paintStageFoot(n);
@@ -5786,8 +5790,8 @@ function paintMemoClip(){
   const shown=S.memo.style!=='list';
   f.style.display=shown?'':'none';
   if(!shown || f.childNodes.length) return;
-  f.appendChild(switchRow('카드 높이 맞추기',
-    '카드를 같은 높이로 맞추고, 넘치는 내용은 …으로 줄입니다',
+  f.appendChild(switchRow('긴 내용 생략',
+    '카드는 최대 두 줄까지만 보이고, 2단 그리드는 사진 비율 타일로 잘립니다',
     ()=>!!S.memo.clip,
     function(v){ S.memo.clip=v; renderAll(); save(); }));
 }

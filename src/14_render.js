@@ -247,6 +247,11 @@ function bodyAfterSub(note){
   for(let i=0;i<bl.length;i++){ if(bl[i].trim()!==''){ return bl.slice(i+1).join('\n'); } }
   return '';
 }
+/* The preview line is a taste of the note, not a list item: a leading "- " sitting
+   next to properly drawn bullets just looks like a typo. */
+function subText(v){
+  return String(v||'').replace(/^\s*(?:[-–—*·•]|\[[ xX]?\])\s+/,'');
+}
 function memoBodyNode(note,t,limit){
   const wrap=el('div','md-body rt');
   wrap.style.color=t.bodyCol; wrap.style.fontSize=t.fontSize+'px';
@@ -344,21 +349,24 @@ function renderMemoHome(notes,opt){
       const ti=el('div','mc-title rt'); ti.innerHTML=richHTML(n.title)||'제목 없음';
       ti.style.color=t.titleCol; ti.style.fontSize=(t.listTitleSize||13)+'px'; c.appendChild(ti);
       let rest=n;
-      if(n.sub){ const sb=el('div','mc-sub rt'); sb.innerHTML=richHTML(n.sub);
+      if(n.sub){ const sb=el('div','mc-sub rt'); sb.innerHTML=richHTML(subText(n.sub));
                  sb.style.color=t.subCol; sb.style.fontSize=(t.subSize||10.5)+'px'; c.appendChild(sb);
                  rest=Object.assign({},n,{body:bodyAfterSub(n)}); }
-      const lines=S.memo.style==='grid'?4:6;
-      /* Off: keep the old block cap — it trims to whole paragraphs, quietly.
-         On: hand over EVERY block and let the line clamp do the cutting, because that
-         is what draws the ellipsis. Capping blocks first would drop the tail with no
-         sign that anything was left out, and a single long paragraph would still run
-         past the others. */
-      const bd=memoBodyNode(rest,t,S.memo.clip?0:lines);
+      /* Off: the old block cap — trims to whole paragraphs, quietly.
+         On: hand over EVERY block and let a LINE clamp do the cutting, because that is
+         what draws the ellipsis. Capping blocks first drops the tail with no sign that
+         anything was left out.
+         A card keeps its natural height: one or two lines stay one or two lines, and
+         anything longer stops at two. Levelling every card to the tallest is what left
+         those long empty stretches. The 2-up grid is the exception — it is a tile, so
+         it holds a photo's proportions and simply cuts at the bottom. */
+      const grid=S.memo.style==='grid';
+      const bd=memoBodyNode(rest,t,S.memo.clip?0:(grid?4:6));
       bd.classList.add('mc-body');
       if(S.memo.clip){
         bd.style.display='-webkit-box';
         bd.style.webkitBoxOrient='vertical';
-        bd.style.webkitLineClamp=String(lines);
+        bd.style.webkitLineClamp=grid?'6':'2';
         bd.style.overflow='hidden';
       }
       bd.style.fontSize=Math.max(8,(t.fontSize-2.5)*0.85)+'px'; bd.style.color=rgba(t.bodyCol,0.88);
@@ -373,7 +381,7 @@ function renderMemoHome(notes,opt){
       ti.style.color=t.titleCol; ti.style.fontSize=(t.listTitleSize||13)+'px'; r.appendChild(ti);
       const m=el('div','mr-m'); m.style.fontSize=(t.subSize||10.5)+'px';
       const dd=el('div','mr-d',memoShortLabel(n)); dd.style.color=t.bodyCol; m.appendChild(dd);
-      const ss=el('div','mr-s rt'); ss.innerHTML=richHTML(n.sub||plain(n.body).slice(0,60))||'추가 텍스트 없음';
+      const ss=el('div','mr-s rt'); ss.innerHTML=richHTML(subText(n.sub)||plain(n.body).slice(0,60))||'추가 텍스트 없음';
       ss.style.color=t.subCol; m.appendChild(ss);
       r.appendChild(m);
       if(n.tag){ const g2=el('span','mc-tag',n.tag); g2.style.background=t.tagBg; g2.style.color=t.tagText;

@@ -360,8 +360,8 @@ function paintMemoClip(){
   const shown=S.memo.style!=='list';
   f.style.display=shown?'':'none';
   if(!shown || f.childNodes.length) return;
-  f.appendChild(switchRow('카드 높이 맞추기',
-    '카드를 같은 높이로 맞추고, 넘치는 내용은 …으로 줄입니다',
+  f.appendChild(switchRow('긴 내용 생략',
+    '카드는 최대 두 줄까지만 보이고, 2단 그리드는 사진 비율 타일로 잘립니다',
     ()=>!!S.memo.clip,
     function(v){ S.memo.clip=v; renderAll(); save(); }));
 }

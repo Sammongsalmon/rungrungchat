@@ -231,21 +231,6 @@ function layoutDeck(animate){
    MASTER RENDER
    ============================================================ */
 let renderLock=false;
-/* With the clamp on, every card shows the same number of lines at most — but a card
-   with two lines is still shorter than one with six. Level them to the tallest on the
-   same page so the grid reads as a grid. Measured after layout, because that is the
-   only moment the real heights exist. */
-function equalizeMemoCards(){
-  $$('#deck .mv-cards.is-clip').forEach(function(host){
-    const cards=$$('.mv-card',host);
-    if(cards.length<2) return;
-    cards.forEach(function(c){ c.style.minHeight=''; });
-    let tall=0;
-    cards.forEach(function(c){ tall=Math.max(tall,c.offsetHeight); });
-    if(tall>0) cards.forEach(function(c){ c.style.minHeight=tall+'px'; });
-  });
-}
-
 function renderAll(){
   if(renderLock) return;
   renderLock=true;
@@ -253,7 +238,6 @@ function renderAll(){
   const keepT=area?area.scrollTop:0, keepL=area?area.scrollLeft:0;
   try{
     const n=buildDeck();
-    equalizeMemoCards();
     S.flipIdx=clamp(S.flipIdx,0,Math.max(0,n-1));
     layoutDeck(false);
     paintStageFoot(n);
