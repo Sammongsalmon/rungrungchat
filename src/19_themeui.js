@@ -539,11 +539,21 @@ function avatarFold(){
   return av;
 }
 
+let _thPending=false;
 function paintThemeEditor(force){
   const box=$('#thEditor'); if(!box) return;
+  /* Never rebuild while a colour picker is open: the picker IS the thing being used,
+     and committing a colour repaints the editor, which used to delete it mid-edit —
+     the picker appeared to slam shut the moment you touched it. Sync the values in
+     place instead and hold the rebuild until the picker closes. */
+  if(box.querySelector('.cp.open')){
+    if(force) _thPending=true;
+    $$('[class]',box).forEach(n=>{ if(n._sync) n._sync(); }); syncEditor(box);
+    return;
+  }
   const key=S.mode+'|'+S.themeId+'|'+participants().join(',');
   if(!force && key===_thKey){ $$('[class]',box).forEach(n=>{ if(n._sync) n._sync(); }); syncEditor(box); return; }
-  _thKey=key;
+  _thKey=key; _thPending=false;
   box.innerHTML='';
   const t=()=>T();
 

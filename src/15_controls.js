@@ -217,7 +217,14 @@ const CP_QUICK=['#FFFFFF','#F2F3F5','#9AA1AB','#3E444C','#111111',
                 '#3B82F6','#6E56CF','#C13DBE','#F2668B','#8C6239','#0E7490'];
 const CP_OPEN=[];
 function cpCloseAll(except){
-  CP_OPEN.forEach(function(n){ if(n!==except) n.classList.remove('open'); });
+  let closed=false;
+  CP_OPEN.forEach(function(n){
+    if(n!==except && n.classList.contains('open')){ n.classList.remove('open'); closed=true; }
+  });
+  /* a rebuild the picker was holding back can happen now */
+  if(closed && typeof _thPending!=='undefined' && _thPending && typeof paintThemeEditor==='function'){
+    _thPending=false; paintThemeEditor(true);
+  }
 }
 on(document,'pointerdown',function(e){
   if(!e.target.closest || !e.target.closest('.cp')) cpCloseAll(null);
@@ -344,6 +351,11 @@ function colorControl(label,get,set,against,minRatio){
   }
   surface(plane,fromPlane);
   surface(hue,fromHue);
+
+  const doneRow=el('div','cp-done-row');
+  const doneB=el('button','btn sm block','선택 완료');
+  on(doneB,'click',function(e){ e.preventDefault(); cpCloseAll(null); });
+  doneRow.appendChild(doneB); pop.appendChild(doneRow);
 
   on(trig,'click',function(e){
     e.preventDefault();

@@ -1014,6 +1014,7 @@ html[data-ui="dark"] .toast{color:#15171B}
 .rt .fs-lg{font-size:1.14em}
 .rt .fs-xl{font-size:1.32em}
 .rt .fs-xxl{font-size:1.55em}
+.cp-done-row{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
 
 /* ============================================================
    10. FIT WRAPPER (preview auto-scale)
@@ -3304,7 +3305,14 @@ const CP_QUICK=['#FFFFFF','#F2F3F5','#9AA1AB','#3E444C','#111111',
                 '#3B82F6','#6E56CF','#C13DBE','#F2668B','#8C6239','#0E7490'];
 const CP_OPEN=[];
 function cpCloseAll(except){
-  CP_OPEN.forEach(function(n){ if(n!==except) n.classList.remove('open'); });
+  let closed=false;
+  CP_OPEN.forEach(function(n){
+    if(n!==except && n.classList.contains('open')){ n.classList.remove('open'); closed=true; }
+  });
+  /* a rebuild the picker was holding back can happen now */
+  if(closed && typeof _thPending!=='undefined' && _thPending && typeof paintThemeEditor==='function'){
+    _thPending=false; paintThemeEditor(true);
+  }
 }
 on(document,'pointerdown',function(e){
   if(!e.target.closest || !e.target.closest('.cp')) cpCloseAll(null);
@@ -3431,6 +3439,11 @@ function colorControl(label,get,set,against,minRatio){
   }
   surface(plane,fromPlane);
   surface(hue,fromHue);
+
+  const doneRow=el('div','cp-done-row');
+  const doneB=el('button','btn sm block','선택 완료');
+  on(doneB,'click',function(e){ e.preventDefault(); cpCloseAll(null); });
+  doneRow.appendChild(doneB); pop.appendChild(doneRow);
 
   on(trig,'click',function(e){
     e.preventDefault();
@@ -5158,11 +5171,21 @@ function avatarFold(){
   return av;
 }
 
+let _thPending=false;
 function paintThemeEditor(force){
   const box=$('#thEditor'); if(!box) return;
+  /* Never rebuild while a colour picker is open: the picker IS the thing being used,
+     and committing a colour repaints the editor, which used to delete it mid-edit —
+     the picker appeared to slam shut the moment you touched it. Sync the values in
+     place instead and hold the rebuild until the picker closes. */
+  if(box.querySelector('.cp.open')){
+    if(force) _thPending=true;
+    $$('[class]',box).forEach(n=>{ if(n._sync) n._sync(); }); syncEditor(box);
+    return;
+  }
   const key=S.mode+'|'+S.themeId+'|'+participants().join(',');
   if(!force && key===_thKey){ $$('[class]',box).forEach(n=>{ if(n._sync) n._sync(); }); syncEditor(box); return; }
-  _thKey=key;
+  _thKey=key; _thPending=false;
   box.innerHTML='';
   const t=()=>T();
 
