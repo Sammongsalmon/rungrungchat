@@ -86,9 +86,13 @@ const PROPS=('display,position,top,right,bottom,left,width,height,min-width,min-
 'transform,transform-origin,box-shadow,text-shadow,filter,object-fit,list-style-type,'+
 '-webkit-text-fill-color,-webkit-text-stroke-color,-webkit-text-stroke-width').split(',');
 
+/* Properties left out of PDEF are always written out. Margins and paddings MUST be:
+   "not declared" would mean "whatever the browser's own stylesheet says", and the
+   clone lands in a bare document where the app's reset (h1..h4,p,figure{margin:0};
+   ul,ol{margin:0;padding:0}) does not exist. Skipping margin-top:0px on the memo
+   heading handed it back the UA default h2{margin-block:0.83em} = 0.83x31 = 25.73px,
+   which dropped the title onto the search bar and pushed the cards down with it. */
 const PDEF={'background-image':'none','box-shadow':'none','text-shadow':'none','transform':'none','filter':'none',
-'margin-top':'0px','margin-right':'0px','margin-bottom':'0px','margin-left':'0px',
-'padding-top':'0px','padding-right':'0px','padding-bottom':'0px','padding-left':'0px',
 'border-top-width':'0px','border-right-width':'0px','border-bottom-width':'0px','border-left-width':'0px',
 'border-top-style':'none','border-right-style':'none','border-bottom-style':'none','border-left-style':'none',
 'border-top-left-radius':'0px','border-top-right-radius':'0px','border-bottom-right-radius':'0px','border-bottom-left-radius':'0px',
@@ -106,6 +110,27 @@ const PDEF={'background-image':'none','box-shadow':'none','text-shadow':'none','
 'text-decoration-thickness':'auto','text-underline-offset':'auto','font-style':'normal',
 '-webkit-text-stroke-width':'0px','right':'auto','bottom':'auto','top':'auto','left':'auto'};
 
+/* Does this element hold its own text, and all of it on one line?
+   Anything with pre* white-space is excluded: there the line breaks ARE content. */
+function oneLineText(s){
+  let own=false;
+  for(let n=s.firstChild;n;n=n.nextSibling)
+    if(n.nodeType===3 && n.textContent.trim()){ own=true; break; }
+  if(!own) return false;
+  if(/^pre|break-spaces/.test(getComputedStyle(s).whiteSpace)) return false;
+  const rg=document.createRange();
+  rg.selectNodeContents(s);
+  const rects=rg.getClientRects();
+  let top=null;
+  for(let i=0;i<rects.length;i++){
+    const r=rects[i];
+    if(!r.width && !r.height) continue;
+    const t=Math.round(r.top);
+    if(top===null) top=t; else if(t!==top) return false;
+  }
+  return top!==null;
+}
+
 function inlineTree(src,dst){
   const a=[src].concat($$('*',src));
   const b=[dst].concat($$('*',dst));
@@ -114,14 +139,38 @@ function inlineTree(src,dst){
     if(!d) break;
     if(s.ownerSVGElement) continue;                /* inside <svg>: attributes already carry paint */
     const cs=getComputedStyle(s);
+    /* A text box is pinned to its getComputedStyle() width — which for a box that
+       sizes to its own text IS that text's minimum width, so the slack is zero
+       (measured: `검색` 27.73/27.73, the status clock -0.14px). The clone then
+       re-lays the text out inside that frozen box, and half a pixel of difference
+       in how the SVG document shapes the same font at the same size is enough to
+       wrap it: `검색` came out as `검`/`색`, `10월 3일` as `10월 3`/`일`.
+       So freeze the LINE, not the box — keep the text on one line and let the box
+       size to it. Dropping `width` restores exactly the flex-basis:auto sizing the
+       preview itself used, so where the two agree nothing moves at all. */
+    const oneLine=oneLineText(s);
     let css='';
     for(let j=0;j<PROPS.length;j++){
       const p=PROPS[j];
+      if(oneLine && (p==='width' || p==='white-space')) continue;
+      /* Floor the height, don't freeze it. A pinned `height` stops a child's bottom
+         margin from collapsing out of its parent, so the next sibling sits higher in
+         the clone than in the preview (the memo list's rows lost their 3px gap). A
+         min-height keeps the box from shrinking and lets it grow if this document
+         needs one more line, instead of clipping it. */
+      if(p==='height') continue;
       const v=cs.getPropertyValue(p);
+      if(p==='min-height'){
+        const hv=parseFloat(cs.height), mv=parseFloat(v);
+        const use=Math.max(isFinite(hv)?hv:0, isFinite(mv)?mv:0);
+        if(use>0) css+='min-height:'+use+'px;';
+        continue;
+      }
       if(v==='' ) continue;
       if(PDEF[p]!=null && v===PDEF[p]) continue;
       css+=p+':'+v+';';
     }
+    if(oneLine) css+='white-space:nowrap;';
     d.setAttribute('style',css);
     d.removeAttribute('class');
     Array.prototype.slice.call(d.attributes).forEach(function(at){
@@ -130,14 +179,28 @@ function inlineTree(src,dst){
   }
 }
 
+/* Measure the LAYOUT box, never getBoundingClientRect(): #fitInner carries a
+   transform:scale() to fit the stage, and that scale lands in the rect. Every
+   descendant, meanwhile, is pinned to its getComputedStyle() width — which the
+   transform does not touch. Handing the scaled width to the clone root makes the
+   tree short by that much, flex-shrink pushes the shortfall into the tightest text
+   boxes so they re-wrap, and .page{overflow:hidden} clips the right edge. */
 function nodeToSvg(node){
   const r=node.getBoundingClientRect();
-  const w=Math.max(1,Math.round(r.width)), h=Math.max(1,Math.round(r.height));
+  const w=Math.max(1,Math.round(node.offsetWidth||r.width));
+  const h=Math.max(1,Math.round(node.offsetHeight||r.height));
   const clone=node.cloneNode(true);
   inlineTree(node,clone);
   clone.style.margin='0'; clone.style.transform='none'; clone.style.boxShadow='none';
   clone.style.position='relative'; clone.style.left='0'; clone.style.top='0';
   clone.style.width=w+'px'; clone.style.minHeight=h+'px'; clone.style.height=h+'px';
+  /* Inherited text properties the app sets on <body>/.pv but PROPS does not carry.
+     Without them the SVG document shapes the same font differently — and, having no
+     viewport of its own, Android Chrome is free to boost its font sizes. */
+  clone.style.setProperty('-webkit-text-size-adjust','100%');
+  clone.style.setProperty('text-size-adjust','100%');
+  clone.style.setProperty('text-rendering','optimizeLegibility');
+  clone.style.setProperty('-webkit-font-smoothing','antialiased');
   const xml=new XMLSerializer().serializeToString(clone);
   return {w:w,h:h,xml:xml};
 }
