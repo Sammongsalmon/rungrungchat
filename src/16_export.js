@@ -313,6 +313,24 @@ function exportBase(){
    user can click — a click is a fresh gesture, and on phones it also allows
    long-press → save image. */
 let DL_URLS=[];
+/* Browsers only let a page save ONE file by itself. The second and later downloads of
+   a split export are dropped silently on iOS, and on Android they wait behind a
+   "download multiple files?" prompt that is easy to miss — which is why a 3-page save
+   arrived as one image. The pages are all made correctly; it is the handing-over that
+   fails. So offer the ways that do work: the share sheet, which takes every image at
+   once and is the one that puts them in a phone's gallery, and a retry that runs
+   inside the tap itself. */
+function shareableFiles(files){
+  if(!files || files.length<2) return null;
+  if(typeof navigator==='undefined' || typeof navigator.share!=='function') return null;
+  if(typeof File!=='function') return null;
+  let fl;
+  try{ fl=files.map(function(f){ return new File([f.blob], f.name, {type:'image/png'}); }); }
+  catch(e){ return null; }
+  try{ if(navigator.canShare && !navigator.canShare({files:fl})) return null; }catch(e){ return null; }
+  return fl;
+}
+
 function paintExportOut(files){
   const box=$('#exportOut'); if(!box) return;
   DL_URLS.forEach(function(u){ try{ URL.revokeObjectURL(u); }catch(e){} });
@@ -323,8 +341,38 @@ function paintExportOut(files){
   const h=el('div','sec-t','만들어진 이미지'); h.style.margin='0 0 2px';
   box.appendChild(h);
   const note=el('p','hint');
-  note.innerHTML='자동 저장이 막혔다면 아래를 눌러 직접 받으세요. 휴대폰에서는 <b>길게 눌러 이미지 저장</b>도 됩니다.';
+  note.innerHTML = files.length>1
+    ? '브라우저가 한 번에 한 장만 저장하는 경우가 많습니다. <b>'+files.length+'장이 다 저장되지 않았다면</b> 아래에서 받으세요. 휴대폰에서는 <b>길게 눌러 이미지 저장</b>도 됩니다.'
+    : '자동 저장이 막혔다면 아래를 눌러 직접 받으세요. 휴대폰에서는 <b>길게 눌러 이미지 저장</b>도 됩니다.';
   box.appendChild(note);
+
+  if(files.length>1){
+    const row=el('div','btn-row'); row.style.margin='8px 0 2px';
+    if(shareableFiles(files)){
+      const sb=el('button','btn sm ink-btn');
+      sb.innerHTML=ico('download',14)+'한 번에 저장 ('+files.length+'장)';
+      sb.title='공유 시트로 '+files.length+'장을 한꺼번에 넘깁니다';
+      /* share() needs the tap itself, so it has to hang off this button */
+      on(sb,'click',function(){
+        const fl=shareableFiles(files);
+        if(!fl){ toast('이 브라우저는 한 번에 저장을 지원하지 않습니다','warn'); return; }
+        navigator.share({files:fl}).then(function(){},function(e){
+          if(e && (e.name==='AbortError'||e.name==='NotAllowedError')) return;
+          toast('공유를 열지 못했습니다. 아래에서 한 장씩 받아 주세요','warn');
+        });
+      });
+      row.appendChild(sb);
+    }
+    const rb=el('button','btn sm');
+    rb.innerHTML=ico('download',14)+'다시 내려받기';
+    rb.title='저장을 다시 시도합니다';
+    /* straight from the tap: Android re-asks for permission here and then lets them all through */
+    on(rb,'click',function(){
+      files.forEach(function(f,i){ setTimeout(function(){ downloadBlob(f.blob,f.name); }, i*500); });
+    });
+    row.appendChild(rb);
+    box.appendChild(row);
+  }
 
   const list=el('div','dl-list');
   files.forEach(function(f){
@@ -374,8 +422,14 @@ async function exportPNG(){
       await new Promise(r=>setTimeout(r,380));
     }
     paintExportOut(made);
-    toast(okN>1 ? (okN+'장을 만들었습니다 — 저장이 안 됐으면 아래 목록에서 받으세요')
-                : '이미지를 저장했습니다');
+    if(okN>1){
+      /* the list is the thing that actually works for a split save, so put it on screen */
+      const out=$('#exportOut');
+      if(out && out.scrollIntoView) try{ out.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){}
+      toast(okN+'장을 만들었습니다 — 한 장만 저장됐다면 아래에서 받으세요');
+    }else{
+      toast('이미지를 저장했습니다');
+    }
   }catch(e){
     console.error(e);
     if(made.length) paintExportOut(made);
